@@ -7,7 +7,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "4.0.2"
 }
 
-group = "krews.io"
+group = "com.genomealmanac"
 version = "1.0.0"
 
 repositories {
@@ -16,7 +16,9 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("io.krews", "krews", "0.8.0")
+    compile("io.krews", "krews", "0.8.2")
+    implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
+    implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
 }
 
 tasks.withType<KotlinCompile> {

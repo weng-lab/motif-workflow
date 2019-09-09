@@ -7,4 +7,4 @@ set -e
 # cd to project root directory
 cd "$(dirname "$0")/.."
 
-java -jar build/*.jar $@
+java -jar build/*.jar "$@"

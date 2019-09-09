@@ -1,15 +1,6 @@
-# Krews Boilerplate
+# Motif Workflow
 
-Clone this project to get started quickly with [Krews](https://weng-lab.github.io/krews) using our best practices.
-
-Then make changes in the following places:
-
-- This Readme - Remove this section and put in your own project name and intro.
-- `settings.gradle` - Add your own project name
-- `build.gradle.kts` - Add your own "group" and version. Group can be anything and should describe you or 
-your organization. It looks like *com.myorg.category* by convention.
-- `src/main/kotlin` - Add your application logic here. Replace our examples.
-- `configs` - Add your own configs here.
+Single task workflow for running factorbook-meme on entire encode dataset.
 
 ## Building
 
