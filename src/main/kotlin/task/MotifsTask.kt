@@ -14,7 +14,7 @@ fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = 
     val unzippedBedPath = input.peaksBedGz.dockerPath.dropLast(3)
 
     dockerImage = "genomealmanac/factorbook-meme:v1.0.0"
-    output = MotifsOutput(OutputFile("$bedPrefix.motifs.json"), OutputFile("$bedPrefix.fimo/fimo.tsv"))
+    output = MotifsOutput(OutputFile("$bedPrefix.motifs.json"), OutputFile("$bedPrefix.occurrences.tsv"))
     command =
         """
         gunzip ${input.peaksBedGz.dockerPath}
