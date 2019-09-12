@@ -13,17 +13,7 @@ private val log = KotlinLogging.logger {}
 fun main(args: Array<String>) = run(motifWorkflow, args)
 
 val motifWorkflow = workflow("motif-workflow") {
-    val searchResult = requestEncodeSearch()
-    val experimentAccessions = searchResult.graph.map { it.accession }
-            .subList(0, 20) // TODO: Remove this sublist
-
-    val experimentFiles =
-            runParallel("Experiment Lookup", experimentAccessions, 50) { experimentAccession ->
-        val experiment = requestEncodeExperiment(experimentAccession)
-        val filteredExperiments = experiment.files
-                .filter { it.isReleased() && it.isReplicatedPeaks() }
-        filteredExperiments.map { experiment to it }
-    }.flatten()
+    val experimentFiles = experimentFiles()
 
     // Write peaks file & experiment accessions out to metadata file
     val metadataPath = Files.createTempFile("metadata", ".tsv")
@@ -42,7 +32,7 @@ val motifWorkflow = workflow("motif-workflow") {
                 assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
                 chromSizes = HttpInputFile(chromeSizesUrl(experimentFile.assembly), "${experimentFile.assembly}.chrom.sizes")
         )
-    }.subList(0, 1).toFlux() // TODO: Remove this sublist
+    }.toFlux()
     motifsTask(motifsInputs)
 }
 

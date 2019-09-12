@@ -21,6 +21,7 @@ fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = 
         java -jar /app/meme.jar --peaks=$unzippedBedPath \
             --twobit=${input.assemblyTwoBit.dockerPath} \
             --chrom-info=${input.chromSizes.dockerPath} \
-            --output-dir=$outputsDir
+            --output-dir=$outputsDir \
+            --chrom-filter=chrEBV
         """
 }
