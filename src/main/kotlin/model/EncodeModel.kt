@@ -30,6 +30,6 @@ data class CloudMetadata(val url: String)
 /*
  * Some helper functions
  */
-fun ExperimentFile.isReleased() = status == "released"
-fun ExperimentFile.isReplicatedPeaks() = fileType == "bed narrowPeak" &&
-        (outputType == "replicated peaks" || outputType == "optimal idr thresholded peaks")
+fun ExperimentFile.isReleased() = status.toLowerCase() == "released"
+fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowPeak" &&
+        (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks")
