@@ -1,7 +1,6 @@
 import krews.core.*
 import krews.file.*
 import krews.run
-import model.*
 import mu.KotlinLogging
 import reactor.core.publisher.*
 import task.*
@@ -12,21 +11,27 @@ private val log = KotlinLogging.logger {}
 
 fun main(args: Array<String>) = run(motifWorkflow, args)
 
+data class MotifWorkflowParams(val methylMode: Boolean = false)
+
 val motifWorkflow = workflow("motif-workflow") {
-    val experimentFiles = experimentFiles()
+    val params = params<MotifWorkflowParams>()
+    if (params.methylMode) {
+        runForMethylBed()
+    } else {
+        runForChipSeq()
+    }
+}
+
+fun WorkflowBuilder.runForChipSeq() {
+    val experimentFiles = chipSeqBedFiles()
 
     // Write peaks file & experiment accessions out to metadata file
     val metadataPath = Files.createTempFile("metadata", ".tsv")
-    Files.newBufferedWriter(metadataPath).use { writer ->
-        writer.write("#peaks_accession\tdataset_accession\tassembly\n")
-        for((experiment, experimentFile) in experimentFiles) {
-            writer.write("${experimentFile.accession}\t${experiment.accession}\t${experimentFile.assembly}\n")
-        }
-    }
+    writeMetadataFile(metadataPath, experimentFiles)
     uploadFile(metadataPath, "outputs/metadata.tsv")
 
     // Set up motifs task for each peaks file
-    val motifsInputs = experimentFiles.map { (_, experimentFile) ->
+    val motifsInputs = experimentFiles.map { (experimentFile, _) ->
         MotifsInput(
                 peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz"),
                 assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
@@ -36,13 +41,21 @@ val motifWorkflow = workflow("motif-workflow") {
     motifsTask(motifsInputs)
 }
 
-val URL_ASSEMBLY_REPLACEMENTS = mapOf("GRCh38" to "hg38")
+fun WorkflowBuilder.runForMethylBed() {
+    val methylBeds = methylBedMatches()
 
-private fun assemblyUrl(assembly: String): String {
-    val urlAssembly = URL_ASSEMBLY_REPLACEMENTS.getOrDefault(assembly, assembly)
-    return "https://hgdownload-test.gi.ucsc.edu/goldenPath/$urlAssembly/bigZips/$urlAssembly.2bit"
-}
-private fun chromeSizesUrl(assembly: String): String {
-    val urlAssembly = URL_ASSEMBLY_REPLACEMENTS.getOrDefault(assembly, assembly)
-    return "https://hgdownload-test.gi.ucsc.edu/goldenPath/$urlAssembly/bigZips/$urlAssembly.chrom.sizes"
+    val metadataPath = Files.createTempFile("metadata", ".tsv")
+    writeMethylMetadataFile(metadataPath, methylBeds)
+
+    val motifsInputs = methylBeds.map { methylBedMatch ->
+        val peaksFile = methylBedMatch.chipSeqFile.file
+        val methylBedFile = methylBedMatch.methylBedFile.file
+        MotifsInput(
+                peaksBedGz = HttpInputFile(peaksFile.cloudMetadata!!.url, "${peaksFile.accession}.bed.gz"),
+                assemblyTwoBit = HttpInputFile(assemblyUrl(peaksFile.assembly!!), "${peaksFile.assembly}.2bit"),
+                chromSizes = HttpInputFile(chromeSizesUrl(peaksFile.assembly), "${peaksFile.assembly}.chrom.sizes"),
+                methylBed = HttpInputFile(methylBedFile.cloudMetadata!!.url, "${methylBedFile.accession}.bed.gz")
+        )
+    }.toFlux()
+    motifsTask(motifsInputs)
 }
