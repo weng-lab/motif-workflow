@@ -13,13 +13,14 @@ fun writeMetadataFile(metadataPath: Path, experimentFiles: List<EncodeFileWithEx
 
 fun writeMethylMetadataFile(metadataPath: Path, methylFileMatches: List<MethylFileMatch>) {
     Files.newBufferedWriter(metadataPath).use { writer ->
-        val header = "#peaks_accession\tdataset_accession\tmethyl_bed_accession\t" +
-                "methyl_dataset_accession\tassembly\tbiosample_ontology_id\tdonor\tlife_stage\tage\tage_units\n"
+        val header = "#peaks_accession\tdataset_accession\tmethyl_accessions\t" +
+                "assembly\tbiosample_ontology_id\tdonor\tlife_stage\tage\tage_units\n"
         writer.write(header)
-        for((chipSeqFile, methylBedFile, matchCriteria) in methylFileMatches) {
-            val line = "${chipSeqFile.file.accession}\t${chipSeqFile.experiment.accession}\t${methylBedFile.file.accession}\t" +
-                    "${methylBedFile.experiment.accession}\t${matchCriteria.assembly}\t${matchCriteria.bioSampleOntologyId}\t" +
-                    "${matchCriteria.donorId}\t${matchCriteria.lifeStage}\t${matchCriteria.age}\t${matchCriteria.ageUnits}\n"
+        for((chipSeqFile, methylBedFiles, matchCriteria) in methylFileMatches) {
+            val methylAccessions = methylBedFiles.joinToString(",") { "${it.experiment.accession}:${it.file.accession}" }
+            val line = "${chipSeqFile.file.accession}\t${chipSeqFile.experiment.accession}\t$methylAccessions\t" +
+                    "${matchCriteria.assembly}\t${matchCriteria.bioSampleOntologyId}\t${matchCriteria.donorId}\t" +
+                    "${matchCriteria.lifeStage}\t${matchCriteria.age}\t${matchCriteria.ageUnits}\n"
             writer.write(line)
         }
     }

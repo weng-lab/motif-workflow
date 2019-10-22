@@ -42,19 +42,21 @@ fun WorkflowBuilder.runForChipSeq() {
 }
 
 fun WorkflowBuilder.runForMethylBed() {
-    val methylBeds = methylBedMatches()
+    val methylMatches = methylBedMatches()
 
     val metadataPath = Files.createTempFile("metadata", ".tsv")
-    writeMethylMetadataFile(metadataPath, methylBeds)
+    writeMethylMetadataFile(metadataPath, methylMatches)
 
-    val motifsInputs = methylBeds.map { methylBedMatch ->
+    val motifsInputs = methylMatches.subList(0, 2).map { methylBedMatch ->
         val peaksFile = methylBedMatch.chipSeqFile.file
-        val methylBedFile = methylBedMatch.methylBedFile.file
+        val methylBeds = methylBedMatch.methylBedFiles.map {
+            HttpInputFile(it.file.cloudMetadata!!.url, "${it.file.accession}.bed.gz")
+        }
         MotifsInput(
                 peaksBedGz = HttpInputFile(peaksFile.cloudMetadata!!.url, "${peaksFile.accession}.bed.gz"),
                 assemblyTwoBit = HttpInputFile(assemblyUrl(peaksFile.assembly!!), "${peaksFile.assembly}.2bit"),
                 chromSizes = HttpInputFile(chromeSizesUrl(peaksFile.assembly), "${peaksFile.assembly}.chrom.sizes"),
-                methylBed = HttpInputFile(methylBedFile.cloudMetadata!!.url, "${methylBedFile.accession}.bed.gz")
+                methylBeds = methylBeds
         )
     }.toFlux()
     motifsTask(motifsInputs)

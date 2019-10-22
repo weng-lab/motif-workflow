@@ -126,15 +126,6 @@ fun ExperimentBiosample.toMatchCriteria(bioSampleOntologyId: String, assembly: S
         ExperimentMatchCriteria(bioSampleOntologyId, assembly, this.donor.id, this.age, this.ageUnits, this.lifeStage)
 
 /**
- * Create Map of EncodeFiles (With Experiments) by bio-sample matching criteria
- */
-fun encodeFilesByMatchCriteria(files: Iterable<EncodeFileWithExp>): Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> =
-    files.map { fileWithExp -> fileWithExp.toMatchCriteria() to fileWithExp }
-            .filter { it.first != null }
-            .groupBy { it.first!! }
-            .mapValues { entry -> entry.value.map { it.second }.toSet() }
-
-/**
  * Downloads the given compressed peaks file (.bed.gz) and checks the number of peaks.
  */
 fun bedGzNumPeaks(bedGzUrl: String): Long {
@@ -147,7 +138,7 @@ fun bedGzNumPeaks(bedGzUrl: String): Long {
 
 data class MethylFileMatch(
         val chipSeqFile: EncodeFileWithExp,
-        val methylBedFile: EncodeFileWithExp,
+        val methylBedFiles: Set<EncodeFileWithExp>,
         val matchingCriteria: ExperimentMatchCriteria
 )
 
@@ -158,25 +149,15 @@ fun methylBedMatches(): List<MethylFileMatch> {
     val chipSeqFiles = chipSeqBedFiles()
     val methylBedFiles = methylBedFiles()
 
-    val chipSeqFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = encodeFilesByMatchCriteria(chipSeqFiles)
-    val methylFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = encodeFilesByMatchCriteria(methylBedFiles)
+    val methylFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = methylBedFiles
+            .map { fileWithExp -> fileWithExp.toMatchCriteria() to fileWithExp }
+            .filter { it.first != null }
+            .groupBy { it.first!! }
+            .mapValues { entry -> entry.value.map { it.second }.toSet() }
 
-    val matchingMethylFiles = mutableListOf<MethylFileMatch>()
-    // This set is used to make sure we don't have duplicate Methyl Bed - Chip Seq pairs in our result
-    val methylChipSeqPairs = mutableSetOf<Pair<EncodeFileWithExp, EncodeFileWithExp>>()
-    val bioOntologyMethylBedPairs = methylFilesByMatchCriteria.flatMap { entry -> entry.value.map { entry.key to it } }
-    for ((methylFileCriteria, methylFile) in bioOntologyMethylBedPairs) {
-        if (chipSeqFilesByMatchCriteria.containsKey(methylFileCriteria)) {
-            val boChipSeqFiles = chipSeqFilesByMatchCriteria.getValue(methylFileCriteria)
-            for (chipSeqFile in boChipSeqFiles) {
-                // Make sure we haven't already added this pair
-                if (methylChipSeqPairs.contains(methylFile to chipSeqFile)) continue
-
-                methylChipSeqPairs += methylFile to chipSeqFile
-                matchingMethylFiles += MethylFileMatch(chipSeqFile, methylFile, methylFileCriteria)
-            }
-        }
+    return chipSeqFiles.mapNotNull { chipSeqFile ->
+        val matchCriteria = chipSeqFile.toMatchCriteria() ?: return@mapNotNull null
+        val methylFiles = methylFilesByMatchCriteria[matchCriteria] ?: return@mapNotNull null
+        MethylFileMatch(chipSeqFile, methylFiles, matchCriteria)
     }
-
-    return matchingMethylFiles
 }
