@@ -30,8 +30,8 @@ private fun requestEncodeSearch(searchUrl: HttpUrl): EncodeSearchResult {
     return moshi.adapter(EncodeSearchResult::class.java).fromJson(searchResultString)!!
 }
 
-fun requestEncodeMethylSearch(encodeBaseUrl: String = ENCODE_BASE_URL): EncodeSearchResult {
-    val searchUrl = HttpUrl.parse("$encodeBaseUrl/search/")!!.newBuilder()
+fun requestEncodeMethylSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
             .addQueryParameter("searchTerm", "WGBS")
             .addQueryParameter("type", "Experiment")
             .addQueryParameter("status", "released")
@@ -42,8 +42,8 @@ fun requestEncodeMethylSearch(encodeBaseUrl: String = ENCODE_BASE_URL): EncodeSe
     return requestEncodeSearch(searchUrl)
 }
 
-fun requestEncodeChipSeqSearch(encodeBaseUrl: String = ENCODE_BASE_URL): EncodeSearchResult {
-    val searchUrl = HttpUrl.parse("$encodeBaseUrl/search/")!!.newBuilder()
+fun requestEncodeChipSeqSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
             .addQueryParameter("searchTerm", "ChIP-seq")
             .addQueryParameter("type", "Experiment")
             .addQueryParameter("format", "json")
@@ -52,8 +52,19 @@ fun requestEncodeChipSeqSearch(encodeBaseUrl: String = ENCODE_BASE_URL): EncodeS
     return requestEncodeSearch(searchUrl)
 }
 
-fun requestEncodeExperiment(accession: String, encodeBaseUrl: String = ENCODE_BASE_URL): EncodeExperiment {
-    val experimentUrl = HttpUrl.parse("$encodeBaseUrl/experiments/$accession/")!!.newBuilder()
+fun requestSamtoolsFlagstatsQualityMetrics(partialUrl: String): SamtoolsFlagstatsQualityMetrics {
+    val url = HttpUrl.parse("$ENCODE_BASE_URL$partialUrl")!!.newBuilder()
+            .addQueryParameter("format", "json")
+            .build()
+    val request = Request.Builder().url(url).get().build()
+    val resultString = retry("Samtools Flagstats Quality Metrics Request", 3) {
+        http.newCall(request).execute().body()!!.string()
+    }
+    return moshi.adapter(SamtoolsFlagstatsQualityMetrics::class.java).fromJson(resultString)!!
+}
+
+fun requestEncodeExperiment(accession: String): EncodeExperiment {
+    val experimentUrl = HttpUrl.parse("$ENCODE_BASE_URL/experiments/$accession/")!!.newBuilder()
             .addQueryParameter("format", "json")
             .build()
     val experimentRequest = Request.Builder().url(experimentUrl).get().build()
@@ -138,7 +149,8 @@ fun bedGzNumPeaks(bedGzUrl: String): Long {
 
 data class MethylFileMatch(
         val chipSeqFile: EncodeFileWithExp,
-        val methylBedFiles: Set<EncodeFileWithExp>,
+        val methylExperiment: EncodeExperiment,
+        val methylBeds: Set<ExperimentFile>,
         val matchingCriteria: ExperimentMatchCriteria
 )
 
@@ -148,6 +160,7 @@ data class MethylFileMatch(
 fun methylBedMatches(): List<MethylFileMatch> {
     val chipSeqFiles = chipSeqBedFiles()
     val methylBedFiles = methylBedFiles()
+    val methylExperimentScores = mutableMapOf<EncodeExperiment, Double>()
 
     val methylFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = methylBedFiles
             .map { fileWithExp -> fileWithExp.toMatchCriteria() to fileWithExp }
@@ -157,7 +170,28 @@ fun methylBedMatches(): List<MethylFileMatch> {
 
     return chipSeqFiles.mapNotNull { chipSeqFile ->
         val matchCriteria = chipSeqFile.toMatchCriteria() ?: return@mapNotNull null
-        val methylFiles = methylFilesByMatchCriteria[matchCriteria] ?: return@mapNotNull null
-        MethylFileMatch(chipSeqFile, methylFiles, matchCriteria)
+        var methylFiles = methylFilesByMatchCriteria[matchCriteria] ?: return@mapNotNull null
+        val methylExperiments = methylFiles.map { it.experiment }.toSet()
+        if (methylExperiments.size > 1) {
+            val maxScoreMethylExperiment = methylExperiments.maxBy { methylExperiment ->
+                methylExperimentScores.getOrPut(methylExperiment) { methylExperiment.methylScore() }
+            }
+            methylFiles = methylFiles.filter { it.experiment == maxScoreMethylExperiment }.toSet()
+        }
+        MethylFileMatch(chipSeqFile, methylFiles.first().experiment, methylFiles.map { it.file }.toSet(), matchCriteria)
     }
+}
+
+private fun EncodeExperiment.methylScore(): Double {
+    val bamsByReplicate = this.files
+            .filter { it.isBam() && it.biologicalReplicates.size == 1 }
+            .groupBy { it.biologicalReplicates.first() }
+    val repScores = bamsByReplicate.values.map { repBams ->
+        val bamQAUrls = repBams.mapNotNull { bam ->
+            bam.qualityMetrics?.firstOrNull { it.startsWith("/samtools-flagstats-quality-metrics") }
+        }
+        val bamQAMetrics = bamQAUrls.map { qaUrl -> requestSamtoolsFlagstatsQualityMetrics(qaUrl) }
+        bamQAMetrics.sumBy { it.pairedProperly ?: it.mapped }
+    }
+    return repScores.average()
 }

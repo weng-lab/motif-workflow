@@ -24,8 +24,12 @@ data class ExperimentFile(
         val status: String,
         @Json(name = "file_type") val fileType: String,
         @Json(name = "output_type") val outputType: String,
-        @Json(name = "cloud_metadata") val cloudMetadata: CloudMetadata?
+        @Json(name = "cloud_metadata") val cloudMetadata: CloudMetadata?,
+        @Json(name = "biological_replicates") val biologicalReplicates: List<Int>,
+        @Json(name = "quality_metrics") val qualityMetrics: List<String>?
 )
+
+data class SamtoolsFlagstatsQualityMetrics(@Json(name = "paired_properly") val pairedProperly: Int?, val mapped: Int)
 
 data class CloudMetadata(val url: String)
 
@@ -50,3 +54,4 @@ fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpe
         (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks")
 fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
+fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"

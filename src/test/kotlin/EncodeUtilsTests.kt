@@ -26,7 +26,7 @@ private val log = KotlinLogging.logger {}
         log.info { "methyl bed matches written to $metadataPath" }
 
         val hasMatchingExample = methylBedMatches.any { match ->
-            match.chipSeqFile.file.accession == "ENCFF981HPG" && match.methylBedFiles.any { it.file.accession == "ENCFF550FZT" }
+            match.chipSeqFile.file.accession == "ENCFF981HPG" && match.methylBeds.any { it.accession == "ENCFF550FZT" }
         }
         assertThat(hasMatchingExample).isEqualTo(true)
     }
