@@ -18,17 +18,18 @@ data class MotifsParams(val methylPercentThreshold: Int? = null)
 fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = this.task("motifs", i) {
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
-    val unzippedBedPath = input.peaksBedGz.dockerPath.dropLast(3)
 
-    dockerImage = "genomealmanac/factorbook-meme:v1.0.4"
-    output = MotifsOutput(OutputFile("$bedPrefix.motifs.json"), OutputFile("$bedPrefix.occurrences.tsv"))
+    dockerImage = "genomealmanac/factorbook-meme:v1.0.6"
+    output = MotifsOutput(
+            OutputFile("$bedPrefix.motifs.json", optional = true),
+            OutputFile("$bedPrefix.occurrences.tsv", optional = true)
+    )
     val methylBedArgs = if (input.methylBeds != null) {
         input.methylBeds!!.joinToString(" \\\n") { "--methyl-beds=${it.dockerPath}" }
     } else ""
     command =
         """
-        gunzip ${input.peaksBedGz.dockerPath}
-        java -jar /app/meme.jar --peaks=$unzippedBedPath \
+        java -jar /app/meme.jar --peaks=${input.peaksBedGz.dockerPath} \
             --twobit=${input.assemblyTwoBit.dockerPath} \
             --chrom-info=${input.chromSizes.dockerPath} \
             --output-dir=$outputsDir \

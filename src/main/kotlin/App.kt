@@ -46,6 +46,7 @@ fun WorkflowBuilder.runForMethylBed() {
 
     val metadataPath = Files.createTempFile("metadata", ".tsv")
     writeMethylMetadataFile(metadataPath, methylMatches)
+    uploadFile(metadataPath, "outputs/metadata.tsv")
 
     val motifsInputs = methylMatches.map { methylBedMatch ->
         val peaksFile = methylBedMatch.chipSeqFile.file
