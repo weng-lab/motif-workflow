@@ -52,17 +52,6 @@ fun requestEncodeChipSeqSearch(): EncodeSearchResult {
     return requestEncodeSearch(searchUrl)
 }
 
-fun requestSamtoolsFlagstatsQualityMetrics(partialUrl: String): SamtoolsFlagstatsQualityMetrics {
-    val url = HttpUrl.parse("$ENCODE_BASE_URL$partialUrl")!!.newBuilder()
-            .addQueryParameter("format", "json")
-            .build()
-    val request = Request.Builder().url(url).get().build()
-    val resultString = retry("Samtools Flagstats Quality Metrics Request", 3) {
-        http.newCall(request).execute().body()!!.string()
-    }
-    return moshi.adapter(SamtoolsFlagstatsQualityMetrics::class.java).fromJson(resultString)!!
-}
-
 fun requestEncodeExperiment(accession: String): EncodeExperiment {
     val experimentUrl = HttpUrl.parse("$ENCODE_BASE_URL/experiments/$accession/")!!.newBuilder()
             .addQueryParameter("format", "json")
@@ -187,11 +176,11 @@ private fun EncodeExperiment.methylScore(): Double {
             .filter { it.isBam() && it.biologicalReplicates.size == 1 }
             .groupBy { it.biologicalReplicates.first() }
     val repScores = bamsByReplicate.values.map { repBams ->
-        val bamQAUrls = repBams.mapNotNull { bam ->
-            bam.qualityMetrics?.firstOrNull { it.startsWith("/samtools-flagstats-quality-metrics") }
-        }
-        val bamQAMetrics = bamQAUrls.map { qaUrl -> requestSamtoolsFlagstatsQualityMetrics(qaUrl) }
-        bamQAMetrics.sumBy { it.pairedProperly ?: it.mapped }
+        repBams.filter { bam ->
+            bam.qualityMetrics?.firstOrNull()?.mapped !== null
+        }.map {
+            bam -> bam.qualityMetrics!!.firstOrNull()!!.mapped
+        }.sumByDouble { it!!.split("%")[0].toDouble() }
     }
     return repScores.average()
 }

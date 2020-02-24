@@ -12,21 +12,26 @@ data class SearchGraphEntry(val accession: String)
  * Experiment Metadata Results Model
  */
 data class EncodeExperiment(
-        val accession: String,
-        val files: List<ExperimentFile>,
-        val replicates: List<ExperimentReplicate>,
-        @Json(name = "biosample_ontology") val biosampleOntology: BiosampleOntology
+    val accession: String,
+    val files: List<ExperimentFile>,
+    val replicates: List<ExperimentReplicate>,
+    @Json(name = "biosample_ontology") val biosampleOntology: BiosampleOntology
+)
+
+data class QualityMetrics(
+    @Json(name = "@type") val type: List<String>,
+    @Json(name = "mapped_pct") val mapped: String?
 )
 
 data class ExperimentFile(
-        val accession: String?,
-        val assembly: String?,
-        val status: String,
-        @Json(name = "file_type") val fileType: String,
-        @Json(name = "output_type") val outputType: String,
-        @Json(name = "cloud_metadata") val cloudMetadata: CloudMetadata?,
-        @Json(name = "biological_replicates") val biologicalReplicates: List<Int>,
-        @Json(name = "quality_metrics") val qualityMetrics: List<String>?
+    val accession: String?,
+    val assembly: String?,
+    val status: String,
+    @Json(name = "file_type") val fileType: String,
+    @Json(name = "output_type") val outputType: String,
+    @Json(name = "cloud_metadata") val cloudMetadata: CloudMetadata?,
+    @Json(name = "biological_replicates") val biologicalReplicates: List<Int>,
+    @Json(name = "quality_metrics") val qualityMetrics: List<QualityMetrics>?
 )
 
 data class SamtoolsFlagstatsQualityMetrics(@Json(name = "paired_properly") val pairedProperly: Int?, val mapped: Int)
