@@ -1,17 +1,19 @@
 import krews.core.*
 import krews.file.*
 import krews.run
-import mu.KotlinLogging
 import reactor.core.publisher.*
 import task.*
 import util.*
 import java.nio.file.Files
 
-private val log = KotlinLogging.logger {}
-
 fun main(args: Array<String>) = run(motifWorkflow, args)
 
 data class MotifWorkflowParams(val methylMode: Boolean = false)
+
+val rDHS_FILES = mapOf(
+    "GRCh38" to "http://gcp.wenglab.org/GRCh38-rDHSs.bed",
+    "mm10" to "http://gcp.wenglab.org/mm10-rDHSs.bed"
+)
 
 val motifWorkflow = workflow("motif-workflow") {
     val params = params<MotifWorkflowParams>()
@@ -33,9 +35,12 @@ fun WorkflowBuilder.runForChipSeq() {
     // Set up motifs task for each peaks file
     val motifsInputs = experimentFiles.map { (experimentFile, _) ->
         MotifsInput(
-                peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz"),
-                assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
-                chromSizes = HttpInputFile(chromeSizesUrl(experimentFile.assembly), "${experimentFile.assembly}.chrom.sizes")
+            peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz"),
+            assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
+            chromSizes = HttpInputFile(chromeSizesUrl(experimentFile.assembly), "${experimentFile.assembly}.chrom.sizes"),
+            rDHSs = if (experimentFile.assembly in rDHS_FILES)
+                HttpInputFile(rDHS_FILES.getValue(experimentFile.assembly), "${experimentFile.assembly}-rDHSs.bed")
+            else null
         )
     }.toFlux()
     motifsTask(motifsInputs)
@@ -54,10 +59,13 @@ fun WorkflowBuilder.runForMethylBed() {
             HttpInputFile(it.cloudMetadata!!.url, "${it.accession}.bed.gz")
         }
         MotifsInput(
-                peaksBedGz = HttpInputFile(peaksFile.cloudMetadata!!.url, "${peaksFile.accession}.bed.gz"),
-                assemblyTwoBit = HttpInputFile(assemblyUrl(peaksFile.assembly!!), "${peaksFile.assembly}.2bit"),
-                chromSizes = HttpInputFile(chromeSizesUrl(peaksFile.assembly), "${peaksFile.assembly}.chrom.sizes"),
-                methylBeds = methylBeds
+            peaksBedGz = HttpInputFile(peaksFile.cloudMetadata!!.url, "${peaksFile.accession}.bed.gz"),
+            assemblyTwoBit = HttpInputFile(assemblyUrl(peaksFile.assembly!!), "${peaksFile.assembly}.2bit"),
+            chromSizes = HttpInputFile(chromeSizesUrl(peaksFile.assembly), "${peaksFile.assembly}.chrom.sizes"),
+            methylBeds = methylBeds,
+            rDHSs = if (peaksFile.assembly in rDHS_FILES)
+                HttpInputFile(rDHS_FILES.getValue(peaksFile.assembly), "${peaksFile.assembly}-rDHSs.bed")
+            else null
         )
     }.toFlux()
     motifsTask(motifsInputs)
