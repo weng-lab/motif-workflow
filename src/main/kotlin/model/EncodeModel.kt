@@ -34,8 +34,6 @@ data class ExperimentFile(
     @Json(name = "quality_metrics") val qualityMetrics: List<QualityMetrics>?
 )
 
-data class SamtoolsFlagstatsQualityMetrics(@Json(name = "paired_properly") val pairedProperly: Int?, val mapped: Int)
-
 data class CloudMetadata(val url: String)
 
 data class BiosampleOntology(@Json(name = "@id") val id: String)

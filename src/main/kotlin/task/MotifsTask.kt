@@ -23,7 +23,7 @@ fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = 
     output = MotifsOutput(
         OutputFile("$bedPrefix.motifs.json", optional = true),
         OutputFile("$bedPrefix.occurrences.tsv", optional = true),
-        if (input.rDHSs != null) OutputFile("$bedPrefix.extra.fimo/$bedPrefix.${input.rDHSs}.occurrences.tsv") else null
+        if (input.rDHSs != null) OutputFile("$bedPrefix.extra.fimo/$bedPrefix.${input.rDHSs!!.path}.occurrences.tsv") else null
     )
     val methylBedArgs = if (input.methylBeds != null) {
         input.methylBeds!!.joinToString(" \\\n") { "--methyl-beds=${it.dockerPath}" }

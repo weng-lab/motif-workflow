@@ -3,13 +3,9 @@ package util
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import model.*
-import mu.KotlinLogging
 import okhttp3.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
-
-
-private val log = KotlinLogging.logger {}
 
 const val ENCODE_BASE_URL = "https://www.encodeproject.org/"
 
@@ -137,10 +133,10 @@ fun bedGzNumPeaks(bedGzUrl: String): Long {
 }
 
 data class MethylFileMatch(
-        val chipSeqFile: EncodeFileWithExp,
-        val methylExperiment: EncodeExperiment,
-        val methylBeds: Set<ExperimentFile>,
-        val matchingCriteria: ExperimentMatchCriteria
+    val chipSeqFile: EncodeFileWithExp,
+    val methylExperiment: EncodeExperiment,
+    val methylBeds: Set<ExperimentFile>,
+    val matchingCriteria: ExperimentMatchCriteria
 )
 
 /**
