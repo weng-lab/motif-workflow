@@ -19,7 +19,7 @@ fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = 
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
 
-    dockerImage = "docker.pkg.github.com/krews-community/factorbook-meme/factorbook-meme:latest"
+    dockerImage = "gcr.io/devenv-215523/factorbook-meme:4c807b95717d5cd5a11bbbd783dc8dcc52cc7e44"
     output = MotifsOutput(
         OutputFile("$bedPrefix.motifs.json", optional = true),
         OutputFile("$bedPrefix.occurrences.tsv", optional = true),
