@@ -5,22 +5,24 @@ import krews.file.*
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 
-data class MotifsInput(
+data class MotifsInput<Meta>(
     val peaksBedGz: File,
     val assemblyTwoBit: File,
     val chromSizes: File,
     val methylBeds: List<File>? = null,
-    val rDHSs: File? = null
+    val rDHSs: File? = null,
+    val meta: Meta
 )
-data class MotifsOutput(
+data class MotifsOutput<Meta>(
     val motifsJson: File,
     val motifsXml: File,
     val occurrencesTsv: File,
-    val rDHSOccurrencesTsv: File?
+    val rDHSOccurrencesTsv: File?,
+    val meta: Meta
 )
 data class MotifsParams(val methylPercentThreshold: Int? = null)
 
-fun WorkflowBuilder.motifsTask(name: String,i: Publisher<MotifsInput>) = this.task<MotifsInput,MotifsOutput>(name, i) {
+fun <Meta> WorkflowBuilder.motifsTask(name: String,i: Publisher<MotifsInput<Meta>>): Flux<MotifsOutput<Meta>> = this.task(name, i) {
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
 
@@ -29,7 +31,8 @@ fun WorkflowBuilder.motifsTask(name: String,i: Publisher<MotifsInput>) = this.ta
         OutputFile("$bedPrefix.motifs.json", optional = true),
         OutputFile("$bedPrefix.meme.xml", optional = true),
         OutputFile("$bedPrefix.occurrences.tsv", optional = true),
-        if (input.rDHSs != null) OutputFile("$bedPrefix.extra.fimo/$bedPrefix.${input.rDHSs!!.path}.occurrences.tsv") else null
+        if (input.rDHSs != null) OutputFile("$bedPrefix.extra.fimo/$bedPrefix.${input.rDHSs!!.path}.occurrences.tsv") else null,
+        input.meta
     )
     val methylBedArgs = if (input.methylBeds != null) {
         input.methylBeds!!.joinToString(" \\\n") { "--methyl-beds=${it.dockerPath}" }

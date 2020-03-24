@@ -6,6 +6,9 @@ import model.*
 import okhttp3.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
+import mu.KotlinLogging
+
+private val log = KotlinLogging.logger {}
 
 const val ENCODE_BASE_URL = "https://www.encodeproject.org/"
 
@@ -179,4 +182,67 @@ private fun EncodeExperiment.methylScore(): Double {
         }.sumByDouble { it!!.split("%")[0].toDouble() }
     }
     return repScores.average()
+}
+
+// Aggregate
+fun requestEncodeHistoneSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
+            .addEncodedQueryParameter("searchTerm", "Histone+ChIP-seq")
+            .addQueryParameter("type", "Experiment")
+            .addQueryParameter("status", "released")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("limit", "all")
+            .build()
+    log.info { "Searching for histone using url: $searchUrl" }
+    return requestEncodeSearch(searchUrl)
+}
+
+fun requestEncodeDnaseSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
+            .addQueryParameter("assay_title", "DNase-seq")
+            .addQueryParameter("type", "Experiment")
+            .addQueryParameter("status", "released")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("limit", "all")
+            .build()
+    log.info { "Searching for Dnase using url: $searchUrl" }
+    return requestEncodeSearch(searchUrl)
+}
+
+fun requestEncodeFileWithExps(
+    name: String,
+    experimentAccessions: List<String>,
+    fileFilter: (exp: EncodeExperiment, file: ExperimentFile) -> Boolean
+): List<EncodeFileWithExp> {
+    return runParallel(name, experimentAccessions, 50) { experimentAccession ->
+        val experiment = requestEncodeExperiment(experimentAccession)
+        if (experiment.hasTreatments()) {
+            emptySet<EncodeFileWithExp>()
+        } else {
+            val filteredExperiments = experiment.files.filter {
+                val url = it.cloudMetadata?.url
+                it.isReleased() && !url!!.contains("encode-private") && fileFilter(experiment, it)
+            }
+
+            filteredExperiments.map { EncodeFileWithExp(it, experiment) }
+        }
+    }.flatten()
+}
+
+fun histoneSignalFiles(): List<EncodeFileWithExp> {
+    val searchResult = requestEncodeHistoneSearch()
+    val experimentAccessions = searchResult.graph.map { it.accession }
+
+    return requestEncodeFileWithExps("Histone Experiment Lookup", experimentAccessions) { exp,file ->
+        isReplicatedFoldChangeOverControl(exp, file)
+    }
+}
+
+fun dnaseAlignmentFiles(): List<EncodeFileWithExp> {
+    val searchResult = requestEncodeDnaseSearch()
+    val experimentAccessions = searchResult.graph.map { it.accession }
+
+    return requestEncodeFileWithExps("Dnase Experiment Lookup", experimentAccessions) { exp,file ->
+        isFirstAlignments(exp, file)
+    }
 }

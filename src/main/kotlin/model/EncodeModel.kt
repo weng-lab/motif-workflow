@@ -38,16 +38,18 @@ data class CloudMetadata(val url: String)
 
 data class BiosampleOntology(@Json(name = "@id") val id: String)
 
-data class ExperimentReplicate(val library: ExperimentLibrary?, val libraries: List<ExperimentLibrary>?)
+data class ExperimentReplicate(val library: ExperimentLibrary?, val libraries: List<ExperimentLibrary>?, val biological_replicate_number: Int)
 data class ExperimentLibrary(val biosample: ExperimentBiosample)
 data class ExperimentBiosample(
     @Json(name = "@id") val id: String,
     val donor: ExperimentDonor,
     val age: String,
     @Json(name = "age_units") val ageUnits: String?,
-    @Json(name = "life_stage") val lifeStage: String
+    @Json(name = "life_stage") val lifeStage: String,
+    val treatments: List<BiosampleTreatment>
 )
 data class ExperimentDonor(@Json(name = "@id") val id: String)
+data class BiosampleTreatment(val treatment_term_name: String)
 
 /*
  * Some helper functions
@@ -58,4 +60,16 @@ fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpe
                 || outputType.toLowerCase() == "pseudoreplicated idr thresholded peaks")
 fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
+
 fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"
+fun EncodeExperiment.hasTreatments() = replicates.any { (it.library?.biosample?.treatments?.size ?: 0) > 0 }
+fun EncodeExperiment.firstBioReplicate() = replicates.map { it.biological_replicate_number }.min()
+fun ExperimentFile.isAlignments() = fileType.toLowerCase() == "bam" && outputType == "alignments"
+
+fun isFirstAlignments(experiment: EncodeExperiment, file: ExperimentFile): Boolean = file.isAlignments() &&
+        file.biologicalReplicates.size == 1 &&
+        file.biologicalReplicates[0] == experiment.firstBioReplicate()
+
+fun ExperimentFile.isFoldChangeOverControl() = fileType.toLowerCase() == "bigwig" && outputType == "fold change over control"
+
+fun isReplicatedFoldChangeOverControl(experiment: EncodeExperiment, file: ExperimentFile): Boolean = file.isFoldChangeOverControl() && file.biologicalReplicates.size == experiment.replicates.size
