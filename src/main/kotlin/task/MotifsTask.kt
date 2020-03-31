@@ -12,16 +12,22 @@ data class MotifsInput(
     val methylBeds: List<File>? = null,
     val rDHSs: File? = null
 )
-data class MotifsOutput(val motifsJson: File, val occurrencesTsv: File, val rDHSOccurrencesTsv: File?)
+data class MotifsOutput(
+    val motifsJson: File,
+    val motifsXml: File,
+    val occurrencesTsv: File,
+    val rDHSOccurrencesTsv: File?
+)
 data class MotifsParams(val methylPercentThreshold: Int? = null)
 
 fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = this.task("motifs", i) {
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
 
-    dockerImage = "gcr.io/devenv-215523/factorbook-meme:4c807b95717d5cd5a11bbbd783dc8dcc52cc7e44"
+    dockerImage = "gcr.io/devenv-215523/factorbook-meme:3bb1111c8a14707510d43b026005fa19c4905b27"
     output = MotifsOutput(
         OutputFile("$bedPrefix.motifs.json", optional = true),
+        OutputFile("$bedPrefix.meme.xml", optional = true),
         OutputFile("$bedPrefix.occurrences.tsv", optional = true),
         if (input.rDHSs != null) OutputFile("$bedPrefix.extra.fimo/$bedPrefix.${input.rDHSs!!.path}.occurrences.tsv") else null
     )

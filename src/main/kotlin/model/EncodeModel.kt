@@ -41,11 +41,11 @@ data class BiosampleOntology(@Json(name = "@id") val id: String)
 data class ExperimentReplicate(val library: ExperimentLibrary?, val libraries: List<ExperimentLibrary>?)
 data class ExperimentLibrary(val biosample: ExperimentBiosample)
 data class ExperimentBiosample(
-        @Json(name = "@id") val id: String,
-        val donor: ExperimentDonor,
-        val age: String,
-        @Json(name = "age_units") val ageUnits: String?,
-        @Json(name = "life_stage") val lifeStage: String
+    @Json(name = "@id") val id: String,
+    val donor: ExperimentDonor,
+    val age: String,
+    @Json(name = "age_units") val ageUnits: String?,
+    @Json(name = "life_stage") val lifeStage: String
 )
 data class ExperimentDonor(@Json(name = "@id") val id: String)
 
@@ -54,7 +54,8 @@ data class ExperimentDonor(@Json(name = "@id") val id: String)
  */
 fun ExperimentFile.isReleased() = status.toLowerCase() == "released"
 fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpeak" &&
-        (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks")
+        (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks"
+                || outputType.toLowerCase() == "pseudoreplicated idr thresholded peaks")
 fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
 fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"

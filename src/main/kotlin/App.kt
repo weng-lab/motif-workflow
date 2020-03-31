@@ -38,12 +38,21 @@ fun WorkflowBuilder.runForChipSeq() {
             peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz"),
             assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
             chromSizes = HttpInputFile(chromeSizesUrl(experimentFile.assembly), "${experimentFile.assembly}.chrom.sizes"),
-            rDHSs = if (experimentFile.assembly in rDHS_FILES)
+            rDHSs = null /* if (experimentFile.assembly in rDHS_FILES)
                 HttpInputFile(rDHS_FILES.getValue(experimentFile.assembly), "${experimentFile.assembly}-rDHSs.bed")
-            else null
+            else null */
         )
     }.toFlux()
-    motifsTask(motifsInputs)
+    val motifTask = motifsTask(motifsInputs)
+
+    // perform TOMTOM on discovered motifs
+    val tomTomInputs = motifTask.map {
+        TomTomInput(
+            queryMotif = it.motifsXml
+        )
+    }
+    tomTomTask(tomTomInputs)
+    
 }
 
 fun WorkflowBuilder.runForMethylBed() {
