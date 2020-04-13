@@ -9,25 +9,28 @@ data class TomTomInput(
     val queryMotif: File
 )
 data class TomTomOutput(
-    val tomTomXml: File
+    val tomTomXml: File,
+    val tomTomTsv: File
 )
 data class TomTomParams(
     val threshold: Float? = 0.5F,
     val comparisonDatabases: List<File>
 )
 
-fun WorkflowBuilder.tomTomTask(i: Publisher<TomTomInput>): Flux<TomTomOutput> = this.task("tomtom", i) {
+fun WorkflowBuilder.tomTomTask(name: String,i: Publisher<TomTomInput>) = this.task<TomTomInput,TomTomOutput>(name, i) {
     val params = taskParams<TomTomParams>()
     val memePrefix = input.queryMotif.filenameNoExt()
 
     dockerImage = "gcr.io/devenv-215523/factorbook-meme:3bb1111c8a14707510d43b026005fa19c4905b27"
     output = TomTomOutput(
-        OutputFile("$memePrefix.tomtom.xml")
+        tomTomXml = OutputFile("${memePrefix}.tomtom.xml"),
+        tomTomTsv =  OutputFile("${memePrefix}.tomtom.tsv")
     )
     command =
         """
-        tomtom -thresh ${params.threshold} -oc $outputsDir ${input.queryMotif.dockerPath} \
+        tomtom -thresh ${params.threshold}  -oc $outputsDir  ${input.queryMotif.dockerPath} \
             ${params.comparisonDatabases.joinToString(" ") { it.dockerPath }} && \
-        cp $outputsDir/tomtom_out/tomtom.xml $outputsDir/$memePrefix.tomtom.xml
+        cp $outputsDir/tomtom.xml $outputsDir/$memePrefix.tomtom.xml && \
+        cp $outputsDir/tomtom.tsv $outputsDir/$memePrefix.tomtom.tsv
         """
 }

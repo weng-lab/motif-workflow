@@ -43,7 +43,7 @@ fun WorkflowBuilder.runForChipSeq() {
             else null */
         )
     }.toFlux()
-    val motifTask = motifsTask(motifsInputs)
+    val motifTask = motifsTask("meme",motifsInputs)
 
     // perform TOMTOM on discovered motifs
     val tomTomInputs = motifTask.map {
@@ -51,7 +51,7 @@ fun WorkflowBuilder.runForChipSeq() {
             queryMotif = it.motifsXml
         )
     }
-    tomTomTask(tomTomInputs)
+    tomTomTask("tomtom",tomTomInputs)
     
 }
 
@@ -77,5 +77,5 @@ fun WorkflowBuilder.runForMethylBed() {
             else null
         )
     }.toFlux()
-    motifsTask(motifsInputs)
+    motifsTask("meme",motifsInputs)
 }

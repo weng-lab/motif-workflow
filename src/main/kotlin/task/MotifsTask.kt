@@ -20,7 +20,7 @@ data class MotifsOutput(
 )
 data class MotifsParams(val methylPercentThreshold: Int? = null)
 
-fun WorkflowBuilder.motifsTask(i: Publisher<MotifsInput>): Flux<MotifsOutput> = this.task("motifs", i) {
+fun WorkflowBuilder.motifsTask(name: String,i: Publisher<MotifsInput>) = this.task<MotifsInput,MotifsOutput>(name, i) {
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
 
