@@ -9,7 +9,6 @@ data class TomTomInput(
     val queryMotif: File
 )
 data class TomTomOutput(
-    val tomTomXml: File,
     val tomTomTsv: File
 )
 data class TomTomParams(
