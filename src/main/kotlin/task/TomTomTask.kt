@@ -21,16 +21,16 @@ fun WorkflowBuilder.tomTomTask(name: String,i: Publisher<TomTomInput>) = this.ta
     val params = taskParams<TomTomParams>()
     val memePrefix = input.queryMotif.filenameNoExt()
 
-    dockerImage = "gcr.io/devenv-215523/factorbook-meme:3bb1111c8a14707510d43b026005fa19c4905b27"
+    dockerImage = "gcr.io/devenv-215523/factorbook-meme:ec670db3dafa98af90fc03e9f5dc25e08925ff29"
     output = TomTomOutput(
-        tomTomXml = OutputFile("${memePrefix}.tomtom.xml"),
         tomTomTsv =  OutputFile("${memePrefix}.tomtom.tsv")
     )
     command =
         """
-        tomtom -thresh ${params.threshold}  -oc $outputsDir  ${input.queryMotif.dockerPath} \
-            ${params.comparisonDatabases.joinToString(" ") { it.dockerPath }} && \
-        cp $outputsDir/tomtom.xml $outputsDir/$memePrefix.tomtom.xml && \
-        cp $outputsDir/tomtom.tsv $outputsDir/$memePrefix.tomtom.tsv
-        """
+        java -jar /app/meme.jar --run-tomtom \
+            ${params.comparisonDatabases.joinToString(" ") { "--tomtom-comparison-databases=" + it.dockerPath }} \
+            --output-dir=$outputsDir \
+            --tomtom-threshold=${params.threshold} \
+            --meme-xml=${input.queryMotif.dockerPath}             
+        """    
 }
