@@ -16,7 +16,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("io.krews", "krews", "0.10.3")
+    compile("io.krews", "krews", "0.10.6")
     implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
     implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.4.0")

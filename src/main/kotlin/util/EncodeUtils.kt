@@ -221,7 +221,7 @@ fun requestEncodeFileWithExps(
         } else {
             val filteredExperiments = experiment.files.filter {
                 val url = it.cloudMetadata?.url
-                it.isReleased() && !url!!.contains("encode-private") && fileFilter(experiment, it)
+                it.isReleased() && url != null && !url.contains("encode-private") && fileFilter(experiment, it)
             }
 
             filteredExperiments.map { EncodeFileWithExp(it, experiment) }

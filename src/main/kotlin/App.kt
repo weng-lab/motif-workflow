@@ -115,7 +115,7 @@ fun WorkflowBuilder.runForChipSeq(gencodeGtfs: Map<String, File>, chromSizes: Ma
         val signalBigWig = conservationSignals[splitOut.assembly]!!
         val sizes = get_chrom_sizes(splitOut.assembly)
         AggregateInput(
-            peaksBedGz = splitOut.allPeaks,
+            allPeaksBed = splitOut.allPeaks,
             proximalPeaksBed = splitOut.proximalPeaks,
             distalPeaksBed = splitOut.distalPeaks,
             signalBigWig = signalBigWig,

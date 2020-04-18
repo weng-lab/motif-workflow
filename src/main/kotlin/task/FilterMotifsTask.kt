@@ -21,16 +21,16 @@ fun <Meta> WorkflowBuilder.filterMotifsTask(i: Publisher<FilterMotifsInput<Meta>
     output = FilterMotifsOutput(input.meta, bedDir)
     command =
         """
-        set -e
         mkdir -p ${bedDir.dockerPath}
         cat ${input.motifsJson.dockerPath} | jq --raw-output '.motifs | map(select(.flank_control_data.z_score > 0 and .flank_control_data.p_value < 0.05 and .shuffled_control_data.z_score > 0 and .shuffled_control_data.p_value < 0.05)) | .[].name' > motifs.tsv
 
         while read motif
         do
+            echo "Subsetting motif: ${'$'}motif"
             cat ${input.motifOccurencesTsv.dockerPath} \
-            | awk -v motif=${'$'}motif '{${'$'}1 == motif}' \
+            | awk -v motif=${'$'}motif '${'$'}1 == motif' \
             | awk 'OFS="\t" { print $2,$3,$4,".",0,$5,0,0,$6,int(($3-$2)/2)+$2 }' \
-            > ${bedDir.dockerPath}/${'$'}motif.bed
-        done < <(cat motifs.tsv)
+            > ${bedDir.dockerPath}/${prefix}-${'$'}motif.bed
+        done < motifs.tsv
         """
 }
