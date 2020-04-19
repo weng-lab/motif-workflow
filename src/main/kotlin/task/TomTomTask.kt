@@ -9,6 +9,7 @@ data class TomTomInput(
     val queryMotif: File
 )
 data class TomTomOutput(
+    val tomTomXml: File,
     val tomTomTsv: File
 )
 data class TomTomParams(
@@ -20,8 +21,9 @@ fun WorkflowBuilder.tomTomTask(name: String,i: Publisher<TomTomInput>) = this.ta
     val params = taskParams<TomTomParams>()
     val memePrefix = input.queryMotif.filenameNoExt()
 
-    dockerImage = "gcr.io/devenv-215523/factorbook-meme:ec670db3dafa98af90fc03e9f5dc25e08925ff29"
+    dockerImage = "gcr.io/devenv-215523/factorbook-meme:e4c1372ac32f3d16163d5a8fe15402f4fe1c6d42"
     output = TomTomOutput(
+        tomTomXml =  OutputFile("${memePrefix}.tomtom.xml"),        
         tomTomTsv =  OutputFile("${memePrefix}.tomtom.tsv")
     )
     command =
