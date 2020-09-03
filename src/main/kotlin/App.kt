@@ -62,7 +62,7 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
             if (assembly == "GRCh38") "hg38" else "GRCh38", genomeMap.get(if (assembly == "GRCh38") "hg38" else "GRCh38")
         )
     }
-    atacAggregateTask("atac-seq aggregate", atacSeqAggregateInput)
+    atacAggregateTask("atacseqaggregate", atacSeqAggregateInput)
 
     // perform TOMTOM on discovered motifs
     val tomTomInputs = motifTask.map {
