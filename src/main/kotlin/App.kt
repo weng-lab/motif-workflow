@@ -8,7 +8,10 @@ import java.nio.file.Files
 
 fun main(args: Array<String>) = run(motifWorkflow, args)
 
-data class MotifWorkflowParams(val methylMode: Boolean = false)
+data class MotifWorkflowParams(
+    val methylMode: Boolean = false,
+    val genomeTarMap: Map<String, File>
+)
 
 val rDHS_FILES = mapOf(
     "GRCh38" to "http://gcp.wenglab.org/GRCh38-rDHSs.bed",
@@ -20,11 +23,11 @@ val motifWorkflow = workflow("motif-workflow") {
     if (params.methylMode) {
         runForMethylBed()
     } else {
-        runForChipSeq()
+        runForChipSeq(params.genomeTarMap)
     }
 }
 
-fun WorkflowBuilder.runForChipSeq() {
+fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
     val experimentFiles = chipSeqBedFiles()
 
     // Write peaks file & experiment accessions out to metadata file
@@ -44,6 +47,22 @@ fun WorkflowBuilder.runForChipSeq() {
         )
     }.toFlux()
     val motifTask = motifsTask("meme",motifsInputs)
+
+    // Find ATAC-seq BAM matches
+    val atacSeqFiles = atacAlignmentMatches()
+    val atacSeqAggregateInput = motifTask.filter {
+        atacSeqFiles.containsKey(it.occurrencesTsv.filename().split('.')[0])
+            && atacSeqFiles.get(it.occurrencesTsv.filename().split('.')[0])!!.atacBams.size > 0
+    }.map {
+        val bam = atacSeqFiles.get(it.occurrencesTsv.filename().split('.')[0])!!.atacBams.first()
+        val assembly = bam.assembly!!
+        ATACAggregateInput(
+            it.occurrencesTsv,
+            HttpInputFile(bam.cloudMetadata!!.url, "${bam.accession}.bam"),
+            if (assembly == "GRCh38") "hg38" else "GRCh38", genomeMap.get(if (assembly == "GRCh38") "hg38" else "GRCh38")
+        )
+    }
+    atacAggregateTask("atac-seq aggregate", atacSeqAggregateInput)
 
     // perform TOMTOM on discovered motifs
     val tomTomInputs = motifTask.map {

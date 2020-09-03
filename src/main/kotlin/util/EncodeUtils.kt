@@ -38,6 +38,18 @@ fun requestEncodeMethylSearch(): EncodeSearchResult {
     return requestEncodeSearch(searchUrl)
 }
 
+fun requestEncodeATACSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
+            .addQueryParameter("searchTerm", "ATAC-seq")
+            .addQueryParameter("type", "Experiment")
+            .addQueryParameter("status", "released")
+            .addQueryParameter("files.output_type", "alignments")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("limit", "all")
+            .build()
+    return requestEncodeSearch(searchUrl)
+}
+
 fun requestEncodeChipSeqSearch(): EncodeSearchResult {
     val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
             .addQueryParameter("searchTerm", "ChIP-seq")
@@ -85,6 +97,21 @@ fun methylBedFiles(): List<EncodeFileWithExp> {
         val filteredExperiments = experiment.files.filter {
             val url = it.cloudMetadata?.url
             it.isReleased() && it.isBedMethyl() && !url!!.contains("encode-private")
+        }
+
+        filteredExperiments.map { EncodeFileWithExp(it, experiment) }
+    }.flatten()
+}
+
+fun atacSeqBamFiles(): List<EncodeFileWithExp> {
+    val searchResult = requestEncodeATACSearch()
+    val experimentAccessions = searchResult.graph.map { it.accession }
+
+    return runParallel("ATAC Experiment Lookup", experimentAccessions, 50) { experimentAccession ->
+        val experiment = requestEncodeExperiment(experimentAccession)
+        val filteredExperiments = experiment.files.filter {
+            val url = it.cloudMetadata?.url
+            it.isReleased() && it.isAlignments() && !url!!.contains("encode-private")
         }
 
         filteredExperiments.map { EncodeFileWithExp(it, experiment) }
@@ -139,6 +166,13 @@ data class MethylFileMatch(
     val matchingCriteria: ExperimentMatchCriteria
 )
 
+data class ATACMatch(
+    val chipSeqFile: EncodeFileWithExp,
+    val atacExperiment: EncodeExperiment,
+    val atacBams: Set<ExperimentFile>,
+    val matchingCriteria: ExperimentMatchCriteria
+)
+
 /**
  * Fetches methyl bed files with matching chip seq narrowPeak files
  */
@@ -167,9 +201,51 @@ fun methylBedMatches(): List<MethylFileMatch> {
     }
 }
 
+/**
+ * Fetches ATAC-seq filtered alignemnt files with matching chip seq narrowPeak files
+ */
+fun atacAlignmentMatches(): Map<String, ATACMatch> {
+    val chipSeqFiles = chipSeqBedFiles()
+    val atacFiles = atacSeqBamFiles()
+    val atacExperimentScores = mutableMapOf<EncodeExperiment, Double>()
+
+    val atacFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = atacFiles
+            .map { fileWithExp -> fileWithExp.toMatchCriteria() to fileWithExp }
+            .filter { it.first != null }
+            .groupBy { it.first!! }
+            .mapValues { entry -> entry.value.map { it.second }.toSet() }
+
+    return chipSeqFiles.mapNotNull { chipSeqFile ->
+        val matchCriteria = chipSeqFile.toMatchCriteria() ?: return@mapNotNull null
+        var atacSeqFiles = atacFilesByMatchCriteria[matchCriteria] ?: return@mapNotNull null
+        val atacSeqExperiments = atacSeqFiles.map { it.experiment }.toSet()
+        if (atacSeqExperiments.size > 1) {
+            val maxScoreATACExperiment = atacSeqExperiments.maxBy { atacSeqExperiment ->
+                atacExperimentScores.getOrPut(atacSeqExperiment) { atacSeqExperiment.atacScore() }
+            }
+            atacSeqFiles = atacSeqFiles.filter { it.experiment == maxScoreATACExperiment }.toSet()
+        }
+        ATACMatch(chipSeqFile, atacSeqFiles.first().experiment, atacSeqFiles.map { it.file }.toSet(), matchCriteria)
+    }.associateBy { it.chipSeqFile.file.accession!! }
+}
+
 private fun EncodeExperiment.methylScore(): Double {
     val bamsByReplicate = this.files
             .filter { it.isBam() && it.biologicalReplicates.size == 1 }
+            .groupBy { it.biologicalReplicates.first() }
+    val repScores = bamsByReplicate.values.map { repBams ->
+        repBams.filter { bam ->
+            bam.qualityMetrics?.firstOrNull()?.mapped !== null
+        }.map {
+            bam -> bam.qualityMetrics!!.firstOrNull()!!.mapped
+        }.sumByDouble { it!!.split("%")[0].toDouble() }
+    }
+    return repScores.average()
+}
+
+private fun EncodeExperiment.atacScore(): Double {
+    val bamsByReplicate = this.files
+            .filter { it.isAlignments() && it.biologicalReplicates.size == 1 }
             .groupBy { it.biologicalReplicates.first() }
     val repScores = bamsByReplicate.values.map { repBams ->
         repBams.filter { bam ->

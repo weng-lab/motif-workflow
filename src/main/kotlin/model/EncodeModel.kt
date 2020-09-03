@@ -59,3 +59,4 @@ fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpe
 fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
 fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"
+fun ExperimentFile.isAlignments() = outputType.toLowerCase() == "alignments"
