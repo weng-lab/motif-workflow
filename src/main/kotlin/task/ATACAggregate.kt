@@ -45,6 +45,7 @@ fun WorkflowBuilder.atacAggregateTask(name: String, i: Publisher<ATACAggregateIn
             --ext-size ${params.extSize} \
             --occurrence-threshold ${params.qValueThreshold} \
             --aggregate \
+            ${ if (input.dnase) "--dnase" else "" }
             > $outputsDir/$bedPrefix.ATAC-aggregate.json
         """
 
