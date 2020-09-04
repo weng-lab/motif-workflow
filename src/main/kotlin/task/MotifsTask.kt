@@ -24,7 +24,7 @@ fun WorkflowBuilder.motifsTask(name: String,i: Publisher<MotifsInput>) = this.ta
     val params = taskParams<MotifsParams>()
     val bedPrefix = input.peaksBedGz.filenameNoExt()
 
-    dockerImage = "gcr.io/devenv-215523/factorbook-meme:3bb1111c8a14707510d43b026005fa19c4905b27"
+    dockerImage = "genomealmanac/factorbook-meme:b00c389a58c7400fc94709fed0f1234f100aecdd"
     output = MotifsOutput(
         OutputFile("$bedPrefix.motifs.json", optional = true),
         OutputFile("$bedPrefix.meme.xml", optional = true),

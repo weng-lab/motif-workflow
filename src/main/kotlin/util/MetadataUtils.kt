@@ -25,3 +25,18 @@ fun writeMethylMetadataFile(metadataPath: Path, methylFileMatches: List<MethylFi
         }
     }
 }
+
+fun writeATACMetadataFile(metadataPath: Path, atacFileMatches: List<ATACMatch>) {
+    Files.newBufferedWriter(metadataPath).use { writer ->
+        val header = "#peaks_accession\tdataset_accession\tatac_dataset_accession\tatac_bam_accession\t" +
+                "assembly\tbiosample_ontology_id\tdonor\tlife_stage\tage\tage_units\n"
+        writer.write(header)
+        for((chipSeqFile, atacExperiment, atacBamFiles, matchCriteria) in atacFileMatches) {
+            val atacBamAccessions = atacBamFiles.joinToString(",") { it.accession!! }
+            val line = "${chipSeqFile.file.accession}\t${chipSeqFile.experiment.accession}\t${atacExperiment.accession}\t" +
+                    "$atacBamAccessions\t${matchCriteria.assembly}\t${matchCriteria.bioSampleOntologyId}\t${matchCriteria.donorId}\t" +
+                    "${matchCriteria.lifeStage}\t${matchCriteria.age}\t${matchCriteria.ageUnits}\n"
+            writer.write(line)
+        }
+    }
+}

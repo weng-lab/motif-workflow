@@ -50,6 +50,9 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
 
     // Find ATAC-seq BAM matches
     val atacSeqFiles = atacAlignmentMatches()
+    val atacMetadataPath = Files.createTempFile("atac-metadata", ".tsv")
+    writeATACMetadataFile(metadataPath, atacSeqFiles.values.toList())
+    uploadFile(atacMetadataPath, "outputs/atac-metadata.tsv")
     val atacSeqAggregateInput = motifTask.filter {
         atacSeqFiles.containsKey(it.occurrencesTsv.filename().split('.')[0])
             && atacSeqFiles.get(it.occurrencesTsv.filename().split('.')[0])!!.atacBams.size > 0

@@ -24,20 +24,23 @@ data class ATACAggregateParams(
 fun WorkflowBuilder.atacAggregateTask(name: String, i: Publisher<ATACAggregateInput>) = this.task<ATACAggregateInput, ATACAggregateOutput>(name, i) {
     
     val params = taskParams<ATACAggregateParams>()
-    val bedPrefix = input.occurrences.filenameNoExt()
+    val assembly = if (input.assembly === "GRCh38") "hg38" else input.assembly
+    val bedPrefix = input.occurrences.filenameNoExt().split(".")[0] + "-${input.bam.filenameNoExt().split(".")[0]}"
 
-    dockerImage = "gcr.io/devenv-215523/dnase-atac-signal-bias-correction:98448d20d48561549add9a13d5161c4e1f366ae5"
+    dockerImage = "docker.io/genomealmanac/dnase-atac-signal-bias-correction:latest"
     output = ATACAggregateOutput(
         OutputFile("$bedPrefix.ATAC-aggregate.json", optional = true)
     )
 
     command =
         """
-        ${ if (input.genomeTar !== null) "tar xfvz ${input.genomeTar!!.dockerPath} --directory /root/rgtdata/${input.assembly} &&" else "" } \
-        python3 -m app.main \
+        cd / && cp ${input.bam.dockerPath} $outputsDir/input.bam && samtools index $outputsDir/input.bam && \
+        mkdir -p $outputsDir/rgtdata && \
+        ${ if (input.genomeTar !== null) "tar xfvz ${input.genomeTar!!.dockerPath} --directory $outputsDir/rgtdata/${assembly} &&" else "" } \
+        RGTDATA=$outputsDir/rgtdata PYTHONPATH=/reg-gen /usr/bin/python3 -m app.main \
             --bed ${input.occurrences.dockerPath} \
-            --bam ${input.bam.dockerPath} \
-            --assembly ${input.assembly} \
+            --bam $outputsDir/input.bam \
+            --assembly ${assembly} \
             --ext-size ${params.extSize} \
             --occurrence-threshold ${params.qValueThreshold} \
             --aggregate \
