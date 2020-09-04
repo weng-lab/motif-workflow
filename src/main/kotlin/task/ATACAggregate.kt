@@ -35,12 +35,12 @@ fun WorkflowBuilder.atacAggregateTask(name: String, i: Publisher<ATACAggregateIn
     command =
         """
         cd / && cp ${input.bam.dockerPath} $outputsDir/input.bam && samtools index $outputsDir/input.bam && \
-        mkdir -p $outputsDir/rgtdata && \
-        ${ if (input.genomeTar !== null) "tar xfvz ${input.genomeTar!!.dockerPath} --directory $outputsDir/rgtdata/${assembly} &&" else "" } \
+        mkdir -p $outputsDir/rgtdata/$assembly && \
+        ${ if (input.genomeTar !== null) "tar xfvz ${input.genomeTar!!.dockerPath} --directory $outputsDir/rgtdata/$assembly &&" else "" } \
         RGTDATA=$outputsDir/rgtdata PYTHONPATH=/reg-gen /usr/bin/python3 -m app.main \
             --bed ${input.occurrences.dockerPath} \
             --bam $outputsDir/input.bam \
-            --assembly ${assembly} \
+            --assembly $assembly \
             --ext-size ${params.extSize} \
             --occurrence-threshold ${params.qValueThreshold} \
             --aggregate \
