@@ -9,7 +9,8 @@ data class ATACAggregateInput(
     val occurrences: File,
     val bam: File,
     val assembly: String,
-    val genomeTar: File?
+    val genomeTar: File?,
+    val dnase: Boolean = false
 )
 
 data class ATACAggregateOutput(

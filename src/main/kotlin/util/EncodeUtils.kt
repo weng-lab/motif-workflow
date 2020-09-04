@@ -50,6 +50,18 @@ fun requestEncodeATACSearch(): EncodeSearchResult {
     return requestEncodeSearch(searchUrl)
 }
 
+fun requestEncodeDNaseSearch(): EncodeSearchResult {
+    val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
+            .addQueryParameter("searchTerm", "DNase-seq")
+            .addQueryParameter("type", "Experiment")
+            .addQueryParameter("status", "released")
+            .addQueryParameter("files.output_type", "alignments")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("limit", "all")
+            .build()
+    return requestEncodeSearch(searchUrl)
+}
+
 fun requestEncodeChipSeqSearch(): EncodeSearchResult {
     val searchUrl = HttpUrl.parse("$ENCODE_BASE_URL/search/")!!.newBuilder()
             .addQueryParameter("searchTerm", "ChIP-seq")
@@ -118,17 +130,32 @@ fun atacSeqBamFiles(): List<EncodeFileWithExp> {
     }.flatten()
 }
 
+fun dnaseSeqBamFiles(): List<EncodeFileWithExp> {
+    val searchResult = requestEncodeDNaseSearch()
+    val experimentAccessions = searchResult.graph.map { it.accession }
+
+    return runParallel("DNase Experiment Lookup", experimentAccessions, 50) { experimentAccession ->
+        val experiment = requestEncodeExperiment(experimentAccession)
+        val filteredExperiments = experiment.files.filter {
+            val url = it.cloudMetadata?.url
+            it.isReleased() && it.isAlignments() && !url!!.contains("encode-private")
+        }
+
+        filteredExperiments.map { EncodeFileWithExp(it, experiment) }
+    }.flatten()
+}
+
 /**
  * Class representing fields to match experiments by
  * (Hashable and therefor matchable by all fields because data class)
  */
 data class ExperimentMatchCriteria(
-        val bioSampleOntologyId: String,
-        val assembly: String,
-        val donorId: String,
-        val age: String,
-        val ageUnits: String?,
-        val lifeStage: String
+    val bioSampleOntologyId: String,
+    val assembly: String,
+    val donorId: String,
+    val age: String,
+    val ageUnits: String?,
+    val lifeStage: String
 )
 
 fun EncodeFileWithExp.toMatchCriteria(): ExperimentMatchCriteria? {
@@ -146,7 +173,7 @@ fun EncodeFileWithExp.toMatchCriteria(): ExperimentMatchCriteria? {
 }
 
 fun ExperimentBiosample.toMatchCriteria(bioSampleOntologyId: String, assembly: String) =
-        ExperimentMatchCriteria(bioSampleOntologyId, assembly, this.donor.id, this.age, this.ageUnits, this.lifeStage)
+    ExperimentMatchCriteria(bioSampleOntologyId, assembly, this.donor.id, this.age, this.ageUnits, this.lifeStage)
 
 /**
  * Downloads the given compressed peaks file (.bed.gz) and checks the number of peaks.
@@ -170,6 +197,13 @@ data class ATACMatch(
     val chipSeqFile: EncodeFileWithExp,
     val atacExperiment: EncodeExperiment,
     val atacBams: Set<ExperimentFile>,
+    val matchingCriteria: ExperimentMatchCriteria
+)
+
+data class DNaseMatch(
+    val chipSeqFile: EncodeFileWithExp,
+    val dnaseExperiment: EncodeExperiment,
+    val bestDnaseBam: ExperimentFile,
     val matchingCriteria: ExperimentMatchCriteria
 )
 
@@ -229,10 +263,38 @@ fun atacAlignmentMatches(): Map<String, ATACMatch> {
     }.associateBy { it.chipSeqFile.file.accession!! }
 }
 
+/**
+ * Fetches ATAC-seq filtered alignemnt files with matching chip seq narrowPeak files
+ */
+fun dnaseAlignmentMatches(): Map<String, DNaseMatch> {
+    val chipSeqFiles = chipSeqBedFiles()
+    val dnaseFiles = atacSeqBamFiles()
+    val dnaseExperimentScores = mutableMapOf<EncodeExperiment, Double>()
+
+    val dnaseFilesByMatchCriteria: Map<ExperimentMatchCriteria, Set<EncodeFileWithExp>> = dnaseFiles
+        .map { fileWithExp -> fileWithExp.toMatchCriteria() to fileWithExp }
+        .filter { it.first != null }
+        .groupBy { it.first!! }
+        .mapValues { entry -> entry.value.map { it.second }.toSet() }
+
+    return chipSeqFiles.mapNotNull { chipSeqFile ->
+        val matchCriteria = chipSeqFile.toMatchCriteria() ?: return@mapNotNull null
+        var dnaseSeqFiles = dnaseFilesByMatchCriteria[matchCriteria] ?: return@mapNotNull null
+        val dnaseSeqExperiments = dnaseSeqFiles.map { it.experiment }.filter { it.bestDNaseBAM(chipSeqFile.file.assembly) !== null }.toSet()
+        if (dnaseSeqExperiments.size > 1) {
+            val maxScoreDNaseExperiment = dnaseSeqExperiments.maxBy { dnaseSeqExperiment ->
+                dnaseExperimentScores.getOrPut(dnaseSeqExperiment) { dnaseSeqExperiment.dnaseScore() }
+            }
+            dnaseSeqFiles = dnaseSeqFiles.filter { it.experiment == maxScoreDNaseExperiment }.toSet()
+        }
+        DNaseMatch(chipSeqFile, dnaseSeqFiles.first().experiment, dnaseSeqFiles.first().experiment.bestDNaseBAM(chipSeqFile.file.assembly)!!, matchCriteria)
+    }.associateBy { it.chipSeqFile.file.accession!! }
+}
+
 private fun EncodeExperiment.methylScore(): Double {
     val bamsByReplicate = this.files
-            .filter { it.isBam() && it.biologicalReplicates.size == 1 }
-            .groupBy { it.biologicalReplicates.first() }
+        .filter { it.isBam() && it.biologicalReplicates.size == 1 }
+        .groupBy { it.biologicalReplicates.first() }
     val repScores = bamsByReplicate.values.map { repBams ->
         repBams.filter { bam ->
             bam.qualityMetrics?.firstOrNull()?.mapped !== null
@@ -245,8 +307,8 @@ private fun EncodeExperiment.methylScore(): Double {
 
 private fun EncodeExperiment.atacScore(): Double {
     val bamsByReplicate = this.files
-            .filter { it.isAlignments() && it.biologicalReplicates.size == 1 }
-            .groupBy { it.biologicalReplicates.first() }
+        .filter { it.isAlignments() && it.biologicalReplicates.size == 1 }
+        .groupBy { it.biologicalReplicates.first() }
     val repScores = bamsByReplicate.values.map { repBams ->
         repBams.filter { bam ->
             bam.qualityMetrics?.firstOrNull()?.mapped !== null
@@ -255,4 +317,16 @@ private fun EncodeExperiment.atacScore(): Double {
         }.sumByDouble { it!!.split("%")[0].toDouble() }
     }
     return repScores.average()
+}
+
+private fun EncodeExperiment.bestDNaseBAM(assembly: String? = null): ExperimentFile? {
+    return this.files
+        .filter { it.isAlignments() && it.biologicalReplicates.size == 1 && (assembly is null || it.assembly === assembly)}
+        .sortedBy { it.biologicalReplicates.first() }.firstOrNull()
+}
+
+private fun EncodeExperiment.dnaseScore(): Double {
+    val bam = this.bestDNaseBAM()
+    if (bam?.qualityMetrics?.firstOrNull()?.mapped === null) return 0.0
+    return bam.qualityMetrics.firstOrNull()!!.mapped!!.split("%")[0].toDouble()
 }

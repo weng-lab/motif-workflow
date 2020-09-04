@@ -67,6 +67,25 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
     }
     atacAggregateTask("atacseqaggregate", atacSeqAggregateInput)
 
+    // Find DNase-seq BAM matches
+    val dnaseSeqFiles = dnaseAlignmentMatches()
+    val dnaseMetadataPath = Files.createTempFile("dnase-metadata", ".tsv")
+    writeDNaseMetadataFile(metadataPath, dnaseSeqFiles.values.toList())
+    uploadFile(dnaseMetadataPath, "outputs/dnase-metadata.tsv")
+    val dnaseSeqAggregateInput = motifTask.filter {
+        dnaseSeqFiles.containsKey(it.occurrencesTsv.filename().split('.')[0])
+    }.map {
+        val bam = dnaseSeqFiles.get(it.occurrencesTsv.filename().split('.')[0])!!.bestDnaseBam
+        val assembly = bam.assembly!!
+        ATACAggregateInput(
+            it.occurrencesTsv,
+            HttpInputFile(bam.cloudMetadata!!.url, "${bam.accession}.bam"),
+            if (assembly == "GRCh38") "hg38" else "GRCh38", genomeMap.get(if (assembly == "GRCh38") "hg38" else "GRCh38"),
+            true
+        )
+    }
+    atacAggregateTask("dnaseseqaggregate", dnaseSeqAggregateInput)
+
     // perform TOMTOM on discovered motifs
     val tomTomInputs = motifTask.map {
         TomTomInput(
