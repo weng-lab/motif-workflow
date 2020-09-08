@@ -33,9 +33,8 @@ fun writeATACMetadataFile(metadataPath: Path, atacFileMatches: List<ATACMatch>) 
         writer.write(header)
         for((chipSeqFile, atacExperiment, atacBamFiles, matchCriteria) in atacFileMatches) {
             val atacBamAccessions = atacBamFiles.joinToString(",") { it.accession!! }
-            val line = "${chipSeqFile.file.accession}\t${chipSeqFile.experiment.accession}\t${atacExperiment.accession}\t" +
-                    "$atacBamAccessions\t${matchCriteria.assembly}\t${matchCriteria.bioSampleOntologyId}\t${matchCriteria.donorId}\t" +
-                    "${matchCriteria.lifeStage}\t${matchCriteria.age}\t${matchCriteria.ageUnits}\n"
+            val line = "${chipSeqFile.file.accession}\t${chipSeqFile.experiment.accession}\t" +
+                    "$atacBamAccessions\t${atacExperiment.accession}\t${matchCriteria.assembly}\t${matchCriteria.bioSampleOntologyId}\n"
             writer.write(line)
         }
     }
