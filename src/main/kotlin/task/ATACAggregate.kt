@@ -18,7 +18,7 @@ data class ATACAggregateOutput(
 )
 
 data class ATACAggregateParams(
-    val qValueThreshold: Float = 1E-6F,
+    val qValueThreshold: Float = 1.0F,
     val extSize: Int = 1000
 )
 
@@ -36,7 +36,7 @@ fun WorkflowBuilder.atacAggregateTask(name: String, i: Publisher<ATACAggregateIn
     command =
         """
         cd / && cp ${input.bam.dockerPath} $outputsDir/input.bam && samtools index $outputsDir/input.bam && \
-        mkdir -p $outputsDir/rgtdata/$assembly && \
+        mkdir -p $outputsDir/rgtdata/$assembly && cp /rgtdata/*.* $outputsDir/rgtdata && mkdir -p $outputsDir/rgtdata/fp_hmms && cp -r /rgtdata/fp_hmms/* $outputsDir/rgtdata/fp_hmms && \
         ${ if (input.genomeTar !== null) "tar xfvz ${input.genomeTar!!.dockerPath} --directory $outputsDir/rgtdata/$assembly &&" else "" } \
         RGTDATA=$outputsDir/rgtdata PYTHONPATH=/reg-gen /usr/bin/python3 -m app.main \
             --bed ${input.occurrences.dockerPath} \
@@ -45,8 +45,8 @@ fun WorkflowBuilder.atacAggregateTask(name: String, i: Publisher<ATACAggregateIn
             --ext-size ${params.extSize} \
             --occurrence-threshold ${params.qValueThreshold} \
             --aggregate \
-            ${ if (input.dnase) "--dnase" else "" }
-            > $outputsDir/$bedPrefix.ATAC-aggregate.json
+            ${ if (input.dnase) "--dnase" else "" } \
+            --output-file $outputsDir/$bedPrefix.ATAC-aggregate.json
         """
 
 }

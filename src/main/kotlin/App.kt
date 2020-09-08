@@ -10,7 +10,9 @@ fun main(args: Array<String>) = run(motifWorkflow, args)
 
 data class MotifWorkflowParams(
     val methylMode: Boolean = false,
-    val genomeTarMap: Map<String, File>
+    val genomeTarMap: Map<String, File>,
+    val twoBitMap: Map<String, File>?,
+    val chromSizesMap: Map<String, File>?
 )
 
 val rDHS_FILES = mapOf(
@@ -23,11 +25,11 @@ val motifWorkflow = workflow("motif-workflow") {
     if (params.methylMode) {
         runForMethylBed()
     } else {
-        runForChipSeq(params.genomeTarMap)
+        runForChipSeq(params.genomeTarMap, params.twoBitMap, params.chromSizesMap)
     }
 }
 
-fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
+fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>, twoBitMap: Map<String, File>?, chromSizesMap: Map<String, File>?) {
     val experimentFiles = chipSeqBedFiles()
 
     // Write peaks file & experiment accessions out to metadata file
@@ -39,11 +41,8 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
     val motifsInputs = experimentFiles.map { (experimentFile, _) ->
         MotifsInput(
             peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz"),
-            assemblyTwoBit = HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
-            chromSizes = HttpInputFile(chromeSizesUrl(experimentFile.assembly), "${experimentFile.assembly}.chrom.sizes"),
-            rDHSs = null /* if (experimentFile.assembly in rDHS_FILES)
-                HttpInputFile(rDHS_FILES.getValue(experimentFile.assembly), "${experimentFile.assembly}-rDHSs.bed")
-            else null */
+            assemblyTwoBit = twoBitMap?.get(experimentFile.assembly!!) ?: HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit"),
+            chromSizes = chromSizesMap?.get(experimentFile.assembly!!) ?: HttpInputFile(chromeSizesUrl(experimentFile.assembly!!), "${experimentFile.assembly}.chrom.sizes")
         )
     }.toFlux()
     val motifTask = motifsTask("meme",motifsInputs)
@@ -68,6 +67,7 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
     atacAggregateTask("atacseqaggregate", atacSeqAggregateInput)
 
     // Find DNase-seq BAM matches
+    /*
     val dnaseSeqFiles = dnaseAlignmentMatches()
     val dnaseMetadataPath = Files.createTempFile("dnase-metadata", ".tsv")
     writeDNaseMetadataFile(metadataPath, dnaseSeqFiles.values.toList())
@@ -85,6 +85,7 @@ fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>) {
         )
     }
     atacAggregateTask("dnaseseqaggregate", dnaseSeqAggregateInput)
+    */
 
     // perform TOMTOM on discovered motifs
     val tomTomInputs = motifTask.map {

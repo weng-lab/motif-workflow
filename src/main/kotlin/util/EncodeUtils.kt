@@ -174,7 +174,6 @@ fun EncodeFileWithExp.toMatchCriteria(): ExperimentMatchCriteria? {
 
 fun ExperimentBiosample.toMatchCriteria(bioSampleOntologyId: String, assembly: String) =
     ExperimentMatchCriteria(bioSampleOntologyId, assembly, this.donor.id, this.age, this.ageUnits, this.lifeStage)
-
 /**
  * Downloads the given compressed peaks file (.bed.gz) and checks the number of peaks.
  */
@@ -287,6 +286,7 @@ fun dnaseAlignmentMatches(): Map<String, DNaseMatch> {
             }
             dnaseSeqFiles = dnaseSeqFiles.filter { it.experiment == maxScoreDNaseExperiment }.toSet()
         }
+	if (dnaseSeqFiles.firstOrNull() === null) return@mapNotNull null
         DNaseMatch(chipSeqFile, dnaseSeqFiles.first().experiment, dnaseSeqFiles.first().experiment.bestDNaseBAM(chipSeqFile.file.assembly)!!, matchCriteria)
     }.associateBy { it.chipSeqFile.file.accession!! }
 }
@@ -321,7 +321,7 @@ private fun EncodeExperiment.atacScore(): Double {
 
 private fun EncodeExperiment.bestDNaseBAM(assembly: String? = null): ExperimentFile? {
     return this.files
-        .filter { it.isAlignments() && it.biologicalReplicates.size == 1 && (assembly is null || it.assembly === assembly)}
+        .filter { it.isAlignments() && it.biologicalReplicates.size == 1 && (assembly === null || it.assembly === assembly)}
         .sortedBy { it.biologicalReplicates.first() }.firstOrNull()
 }
 
