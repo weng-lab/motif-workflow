@@ -21,7 +21,7 @@ fun WorkflowBuilder.tomTomTask(name: String,i: Publisher<TomTomInput>) = this.ta
     val params = taskParams<TomTomParams>()
     val memePrefix = input.queryMotif.filenameNoExt()
 
-    dockerImage = "genomealmanac/factorbook-meme:b00c389a58c7400fc94709fed0f1234f100aecdd"
+    dockerImage = "ghcr.io/krews-community/factorbook-meme/factorbook-meme:latest"
     output = TomTomOutput(
         tomTomXml =  OutputFile("${memePrefix}.tomtom.xml"),        
         tomTomTsv =  OutputFile("${memePrefix}.tomtom.tsv")

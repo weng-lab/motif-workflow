@@ -1,0 +1,49 @@
+package task
+
+import krews.core.*
+import krews.file.*
+import model.*
+import org.reactivestreams.Publisher
+import reactor.core.publisher.Flux
+
+data class ChIPAggregateInput(
+    val bedFile: File,
+    val signalFile: SignalFile,
+    val name: String
+)
+
+data class ChIPAggregateOutput(
+    val aggregateJson: File,
+    val name: String
+)
+
+data class ChIPAggregateParams(
+    val extSize: Int?,
+    val startIndex: Int?,
+    val endIndex: Int?,
+    val resolution: Int?,
+    val decimalResolution: Int?,
+    val j: Int?
+)
+
+fun WorkflowBuilder.chipAggregateTask(name: String, i: Publisher<ChIPAggregateInput>) = this.task<ChIPAggregateInput, ChIPAggregateOutput>(name, i) {
+    
+    val taskParams = taskParams<ChIPAggregateParams>()
+
+    dockerImage = "genomealmanac/signal-extraction-task:latest" // "docker.pkg.github.com/krews-community/signal-extraction-task/signal-extraction-task:0.1.1"
+    output = ChIPAggregateOutput(OutputFile("${input.name}.${input.signalFile.name}.signal.json"), input.name)
+
+    command =
+        """
+        cd / && PYTHONNOUSERSITE=1 python3 -m app matrix --bed-file ${input.bedFile.dockerPath} \
+            --signal-file ${input.signalFile.file.dockerPath} \
+            ${ if (taskParams.extSize !== null) "--extsize ${taskParams.extSize}" else "" } \
+            ${ if (taskParams.startIndex !== null) "--start-index ${taskParams.startIndex}" else "" } \
+            ${ if (taskParams.endIndex !== null) "--end-index ${taskParams.endIndex}" else "" } \
+            ${ if (taskParams.resolution !== null) "--resolution ${taskParams.resolution}" else "" } \
+            ${ if (taskParams.decimalResolution !== null) "--decimal-resolution ${taskParams.decimalResolution}" else "" } \
+            ${ if (taskParams.j !== null) "-j ${taskParams.j}" else "" } \
+            --output-file $outputsDir/${input.name}.${input.signalFile.name}.signal.json
+        """
+
+}

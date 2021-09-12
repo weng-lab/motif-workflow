@@ -55,7 +55,7 @@ data class ExperimentDonor(@Json(name = "@id") val id: String)
 fun ExperimentFile.isReleased() = status.toLowerCase() == "released"
 fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpeak" &&
         (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks"
-                || outputType.toLowerCase() == "pseudoreplicated idr thresholded peaks")
+                || outputType.toLowerCase() == "pseudoreplicated idr thresholded peaks" || outputType.toLowerCase() == "pseudoreplicated peaks" || outputType.toLowerCase() == "idr thresholded peaks")
 fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
 fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"

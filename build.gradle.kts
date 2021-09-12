@@ -12,11 +12,18 @@ version = "1.0.0"
 
 repositories {
     jcenter()
+    maven {
+      url = uri("https://maven.pkg.github.com/weng-lab/krews")
+      credentials {
+        username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+        password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+      }
+    }
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("io.krews", "krews", "0.10.11")
+    compile("io.krews", "krews", "0.12.0")
     implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
     implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.4.0")
