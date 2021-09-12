@@ -1,12 +1,19 @@
 package util
 
 import java.nio.file.*
+import mu.KotlinLogging
+
+private val log = KotlinLogging.logger {}
 
 fun writeMetadataFile(metadataPath: Path, experimentFiles: List<EncodeFileWithExp>) {
     Files.newBufferedWriter(metadataPath).use { writer ->
-        writer.write("#peaks_accession\tdataset_accession\tassembly\n")
-        for((experimentFile, experiment) in experimentFiles) {
-            writer.write("${experimentFile.accession}\t${experiment.accession}\t${experimentFile.assembly}\n")
+        writer.write("#peaks_accession\tdataset_accession\tassembly\ttarget\tbiosample\n")
+        //writer.write("#peaks_accession\tdataset_accession\tassembly\n")
+        for((experimentFile, experiment) in experimentFiles) {            
+            val target = experiment.target?.label
+            val biosample = experiment.biosampleOntology.termName
+            writer.write("${experimentFile.accession}\t${experiment.accession}\t${experimentFile.assembly}\t${target}\t${biosample}\n")
+            //writer.write("${experimentFile.accession}\t${experiment.accession}\t${experimentFile.assembly}\n")
         }
     }
 }

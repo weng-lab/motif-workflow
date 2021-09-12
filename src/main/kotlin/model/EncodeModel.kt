@@ -1,7 +1,7 @@
 package model
 
 import com.squareup.moshi.Json
-
+import java.util.*
 /*
  * Search Results Model
  */
@@ -15,8 +15,11 @@ data class EncodeExperiment(
     val accession: String,
     val files: List<ExperimentFile>,
     val replicates: List<ExperimentReplicate>,
-    @Json(name = "biosample_ontology") val biosampleOntology: BiosampleOntology
+    @Json(name = "biosample_ontology") val biosampleOntology: BiosampleOntology,
+    val target: ExperimentTarget?
 )
+
+data class ExperimentTarget(val label: String)
 
 data class QualityMetrics(
     @Json(name = "@type") val type: List<String>,
@@ -29,14 +32,19 @@ data class ExperimentFile(
     val status: String,
     @Json(name = "file_type") val fileType: String,
     @Json(name = "output_type") val outputType: String,
+    @Json(name = "technical_replicates") val technicalReplicates: List<String>,
     @Json(name = "cloud_metadata") val cloudMetadata: CloudMetadata?,
     @Json(name = "biological_replicates") val biologicalReplicates: List<Int>,
-    @Json(name = "quality_metrics") val qualityMetrics: List<QualityMetrics>?
+    @Json(name = "quality_metrics") val qualityMetrics: List<QualityMetrics>?,
+    @Json(name = "date_created") val dateCreated: Date?
 )
 
 data class CloudMetadata(val url: String)
 
-data class BiosampleOntology(@Json(name = "@id") val id: String)
+data class BiosampleOntology(
+    @Json(name = "@id") val id: String,
+    @Json(name = "term_name") val termName: String
+    )
 
 data class ExperimentReplicate(val library: ExperimentLibrary?, val libraries: List<ExperimentLibrary>?)
 data class ExperimentLibrary(val biosample: ExperimentBiosample)
@@ -60,3 +68,4 @@ fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
         outputType.toLowerCase() == "methylation state at cpg"
 fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"
 fun ExperimentFile.isAlignments() = outputType.toLowerCase() == "alignments"
+fun ExperimentFile.isPeak() = assembly!=null && ( outputType.toLowerCase().contains("idr") || outputType.toLowerCase().contains("replicated") ) && technicalReplicates!=null && !fileType.toLowerCase().contains("big")

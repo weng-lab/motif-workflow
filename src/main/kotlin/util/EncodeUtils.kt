@@ -6,6 +6,13 @@ import model.*
 import okhttp3.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
+import com.squareup.moshi.FromJson
+import com.squareup.moshi.ToJson
+import java.util.TimeZone
+import java.text.SimpleDateFormat
+import java.text.DateFormat
+import java.text.ParseException
+import java.util.*
 
 const val ENCODE_BASE_URL = "https://www.encodeproject.org/"
 
@@ -16,7 +23,29 @@ private val http by lazy {
             .build()
 }
 private val moshi by lazy {
-    Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .add(customDateAdapter())
+            .build()
+}
+class customDateAdapter {
+    val dateFormat: DateFormat
+    init {
+        dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS")
+        dateFormat.timeZone = TimeZone.getTimeZone("GMT")
+    }
+    @ToJson
+    @Synchronized
+    fun dateToJson(d: Date): String {
+        return dateFormat.format(d)
+    }
+
+    @FromJson
+    @Synchronized
+    @Throws(ParseException::class)
+    fun dateToJson(s: String): Date {
+        return dateFormat.parse(s)
+    }
 }
 
 private fun requestEncodeSearch(searchUrl: HttpUrl): EncodeSearchResult {
@@ -89,15 +118,45 @@ fun chipSeqBedFiles(): List<EncodeFileWithExp> {
     val searchResult = requestEncodeChipSeqSearch()
     val experimentAccessions = searchResult.graph.map { it.accession }
 
-    return runParallel("ChipSeq Experiment Lookup", experimentAccessions, 50) { experimentAccession ->
+    val exps = runParallel("ChipSeq Experiment Lookup", experimentAccessions, 50) { experimentAccession ->
         val experiment = requestEncodeExperiment(experimentAccession)
-        val filteredExperiments = experiment.files.filter {
+        val filteredFilesforExp = experiment.files.filter {
             val url = it.cloudMetadata?.url
             it.isReleased() && it.isReplicatedPeaks() && !url!!.contains("encode-private") && bedGzNumPeaks(url) >= 1000
         }
+        val filteredPeakfilesforExp = filteredFilesforExp.filter {
+            it.isPeak()
+        }
 
-        filteredExperiments.map { EncodeFileWithExp(it, experiment) }
+        //max of technical replicates
+        val mreplicates = filteredPeakfilesforExp.map { it->
+            it.technicalReplicates.size
+        }.max()
+
+        var best_files = filteredPeakfilesforExp.filter { it->
+            it.outputType.toLowerCase().contains("optimal")
+        }
+        if(best_files.size==0) {
+            best_files = filteredPeakfilesforExp.filter { it->
+                it.outputType.toLowerCase().contains("pseudoreplicated")
+            }
+        }
+        if(best_files.size==0) {
+            best_files = filteredPeakfilesforExp
+        }
+
+        val mostRecentFiles =  best_files.filter {it-> it.technicalReplicates.size==mreplicates }.sortedByDescending { it.dateCreated }
+
+        var expFile = emptyList<ExperimentFile>()
+        if(mostRecentFiles.size>0){
+            expFile = listOf(mostRecentFiles[0])
+        }
+        expFile.map { EncodeFileWithExp(it, experiment)}
+
+
     }.flatten()
+
+    return exps
 }
 
 fun methylBedFiles(): List<EncodeFileWithExp> {
