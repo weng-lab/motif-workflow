@@ -1,5 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.jfrog.bintray.gradle.BintrayExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.kotlin.dsl.registering
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.get
 
 plugins {
     kotlin("jvm") version "1.7.0"
@@ -9,7 +16,7 @@ plugins {
 }
 
 group = "com.genomealmanac"
-version = "2.1.2"
+version = "2.1.3"
 
 repositories {
     mavenLocal()
