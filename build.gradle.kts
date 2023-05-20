@@ -17,7 +17,7 @@ plugins {
 }
 
 group = "com.genomealmanac"
-version = "2.2.0"
+version = "2.2.2"
 
 repositories {
     mavenLocal()
@@ -42,17 +42,18 @@ dependencies {
     testImplementation("org.assertj", "assertj-core", "3.11.1")
 }
 
-val sourcesJar = tasks.register<Jar>("sourcesJar") {
-    archiveClassifier.set("sources")
+val combinedJar = tasks.register<Jar>("combinedJar") {
+    archiveClassifier.set("combined")
+    archiveBaseName.set("base")
+    destinationDirectory.set(file("build"))
+    from(sourceSets["main"].output)
     from(sourceSets["main"].allSource)
 }
 
-val publicationName = "motif-workflow"
 publishing {
     publications {
-        create<MavenPublication>(publicationName) {
+        val publication = create<MavenPublication>("motif-workflow") {
             from(components["java"])
-            artifact(sourcesJar.get())
         }
     }
     repositories {
@@ -73,10 +74,4 @@ tasks.withType<KotlinCompile> {
 
 application {
     mainClass.set("AppKt")
-}
-
-tasks.withType<ShadowJar> {
-    archiveBaseName.set("base")
-    archiveClassifier.set("")
-    destinationDirectory.set(file("build"))
 }
