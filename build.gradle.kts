@@ -17,7 +17,7 @@ plugins {
 }
 
 group = "com.genomealmanac"
-version = "2.2.2"
+version = "2.2.3"
 
 repositories {
     mavenLocal()
@@ -61,8 +61,8 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/weng-lab/motif-workflow")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME") ?: ""
+                password = project.findProperty("gpr.user") as String? ?: System.getenv("TOKEN") ?: ""
             }
         }
     }
