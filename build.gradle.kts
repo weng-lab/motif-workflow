@@ -28,6 +28,8 @@ dependencies {
     implementation("io.krews", "krews", "0.14.1")
     implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
     implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
+    implementation("io.projectreactor", "reactor-core", "3.2.6.RELEASE")
+    implementation("io.github.microutils", "kotlin-logging", "1.6.10")
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.4.0")
     testImplementation("org.assertj", "assertj-core", "3.11.1")
 }
