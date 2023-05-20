@@ -31,7 +31,7 @@ repositories {
             url = uri("https://maven.pkg.github.com/weng-lab/krews")
             credentials {
                 username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME") ?: ""
-                password project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN") ?: ""
+                password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN") ?: ""
             }
         }
     }
