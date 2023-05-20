@@ -9,30 +9,16 @@ plugins {
 }
 
 group = "com.genomealmanac"
-version = "2.0.1"
-
-fun isRunningInGitHubActions(): Boolean {
-    return System.getenv("GITHUB_ACTIONS")?.toBoolean() ?: false
-}
+version = "2.0.4"
 
 repositories {
     mavenLocal()
     jcenter()
-    if (isRunningInGitHubActions()) {
-        maven {
-            url = uri("https://maven.pkg.github.com/weng-lab/krews")
-            credentials {
-                username = "GitHub"
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    } else {
-        maven {
-            url = uri("https://maven.pkg.github.com/weng-lab/krews")
-            credentials {
-                username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME") ?: ""
-                password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN") ?: ""
-            }
+    maven {
+        url = uri("https://maven.pkg.github.com/weng-lab/krews")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME") ?: ""
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN") ?: ""
         }
     }
 }

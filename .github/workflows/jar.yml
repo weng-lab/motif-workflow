@@ -23,8 +23,12 @@ jobs:
 
     - name: Build
       run: scripts/build.sh
+      env:
+        USERNAME: ${{ secrets.ACCESS_USERNAME }}
+        TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
     - name: Publish
       run: ./gradlew publish
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        USERNAME: ${{ secrets.ACCESS_USERNAME }}
+        TOKEN: ${{ secrets.ACCESS_TOKEN }}
