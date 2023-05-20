@@ -1,6 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.jfrog.bintray.gradle.BintrayExtension
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.kotlin.dsl.registering
 import org.gradle.api.tasks.bundling.Jar
@@ -11,12 +10,14 @@ import org.gradle.kotlin.dsl.get
 plugins {
     kotlin("jvm") version "1.7.0"
     id("application")
+    id("com.jfrog.bintray") version "1.8.1"
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("maven-publish")
     java
 }
 
 group = "com.genomealmanac"
-version = "2.1.3"
+version = "2.2.0"
 
 repositories {
     mavenLocal()
@@ -35,10 +36,15 @@ dependencies {
     implementation("io.krews", "krews", "0.14.1")
     implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
     implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
-    implementation("io.projectreactor", "reactor-core", "3.2.6.RELEASE")
+    implementation("io.projectreactor", "reactor-core", "3.4.11")
     implementation("io.github.microutils", "kotlin-logging", "1.6.10")
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.4.0")
     testImplementation("org.assertj", "assertj-core", "3.11.1")
+}
+
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    archiveClassifier.set("sources")
+    from(sourceSets["main"].allSource)
 }
 
 val publicationName = "motif-workflow"

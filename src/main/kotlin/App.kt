@@ -9,12 +9,18 @@ import java.nio.file.Files
 
 fun main(args: Array<String>) = run(motifWorkflow, args)
 
+data class PeakInput(
+    val file: File,
+    val assembly: String
+)
+
 data class MotifWorkflowParams(
     val methylMode: Boolean = false,
     val genomeTarMap: Map<String, File>,
     val twoBitMap: Map<String, File>?,
     val chromSizesMap: Map<String, File>?,
-    val conservationMap: Map<String, SignalFile>?
+    val conservationMap: Map<String, SignalFile>?,
+    val peaks: List<PeakInput>?
 )
 
 val rDHS_FILES = mapOf(
@@ -27,28 +33,47 @@ val motifWorkflow = workflow("motif-workflow") {
     if (params.methylMode) {
         runForMethylBed()
     } else {
-        runForChipSeq(params.genomeTarMap, params.twoBitMap, params.chromSizesMap, params.conservationMap)
+        runForChipSeq(params.genomeTarMap, params.twoBitMap, params.chromSizesMap, params.conservationMap, params.peaks)
     }
 }
 
-fun WorkflowBuilder.runForChipSeq(genomeMap: Map<String, File>, twoBitMap: Map<String, File>?, chromSizesMap: Map<String, File>?, conservationMap: Map<String, SignalFile>?) {
-    val experimentFiles = chipSeqBedFiles()
-
-    // Write peaks file & experiment accessions out to metadata file
-    val metadataPath = Files.createTempFile("metadata", ".tsv")
-    writeMetadataFile(metadataPath, experimentFiles)
-    uploadFile(metadataPath, "outputs/metadata.tsv")
+fun WorkflowBuilder.runForChipSeq(
+    genomeMap: Map<String, File>,
+    twoBitMap: Map<String, File>?,
+    chromSizesMap: Map<String, File>?,
+    conservationMap: Map<String, SignalFile>?,
+    peaks: List<PeakInput>?
+) {
 
     // Set up motifs task for each peaks file
-    val motifsInputs = experimentFiles.map { (experimentFile, _) ->
-        MotifsInput(
-            peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz", "dockerhub.wenglab.org/pratth/alpine:latest"),
-            assemblyTwoBit = twoBitMap?.get(experimentFile.assembly!!) ?: HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit", "dockerhub.wenglab.org/pratth/alpine:latest"),
-            chromSizes = chromSizesMap?.get(experimentFile.assembly!!) ?: HttpInputFile(chromeSizesUrl(experimentFile.assembly!!), "${experimentFile.assembly}.chrom.sizes", "dockerhub.wenglab.org/pratth/alpine:latest"),
-	    assembly = experimentFile.assembly!!
-        )
-    }.toFlux()
-    val motifTask = motifsTask("meme",motifsInputs)
+    val motifsInputs
+        = if (peaks == null) {
+            val experimentFiles = peaks ?: chipSeqBedFiles()
+
+            // Write peaks file & experiment accessions out to metadata file
+            val metadataPath = Files.createTempFile("metadata", ".tsv")
+            writeMetadataFile(metadataPath, experimentFiles)
+            uploadFile(metadataPath, "outputs/metadata.tsv")
+            
+            experimentFiles.map { (experimentFile, _) ->
+                MotifsInput(
+                    peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz", "dockerhub.wenglab.org/pratth/alpine:latest"),
+                    assemblyTwoBit = twoBitMap?.get(experimentFile.assembly!!) ?: HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit", "dockerhub.wenglab.org/pratth/alpine:latest"),
+                    chromSizes = chromSizesMap?.get(experimentFile.assembly!!) ?: HttpInputFile(chromeSizesUrl(experimentFile.assembly!!), "${experimentFile.assembly}.chrom.sizes", "dockerhub.wenglab.org/pratth/alpine:latest"),
+                    assembly = experimentFile.assembly!!
+                )
+            }.toFlux()
+        } else {
+            peaks.map {
+                MotifsInput(
+                    peaksBedGz = it.file,
+                    assemblyTwoBit = twoBitMap?.get(it.assembly) ?: HttpInputFile(assemblyUrl(it.assembly), "${it.assembly}.2bit", "dockerhub.wenglab.org/pratth/alpine:latest"),
+                    chromSizes = chromSizesMap?.get(it.assembly) ?: HttpInputFile(chromeSizesUrl(it.assembly), "${it.assembly}.chrom.sizes", "dockerhub.wenglab.org/pratth/alpine:latest"),
+                    assembly = it.assembly
+                )
+            }.toFlux()
+        }
+    val motifTask = motifsTask("meme", motifsInputs)
 
     // Conservation aggregation
     val conservationInput = motifTask.filter { conservationMap?.get(it.assembly) !== null }.map {
