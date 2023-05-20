@@ -60,7 +60,9 @@ fun WorkflowBuilder.runForChipSeq(
                     peaksBedGz = HttpInputFile(experimentFile.cloudMetadata!!.url, "${experimentFile.accession}.bed.gz", "dockerhub.wenglab.org/pratth/alpine:latest"),
                     assemblyTwoBit = twoBitMap?.get(experimentFile.assembly!!) ?: HttpInputFile(assemblyUrl(experimentFile.assembly!!), "${experimentFile.assembly}.2bit", "dockerhub.wenglab.org/pratth/alpine:latest"),
                     chromSizes = chromSizesMap?.get(experimentFile.assembly!!) ?: HttpInputFile(chromeSizesUrl(experimentFile.assembly!!), "${experimentFile.assembly}.chrom.sizes", "dockerhub.wenglab.org/pratth/alpine:latest"),
-                    assembly = experimentFile.assembly!!
+                    assembly = experimentFile.assembly!!,
+                    methylBeds = null,
+                    rDHSs = null
                 )
             }.toFlux()
         } else {
@@ -69,7 +71,9 @@ fun WorkflowBuilder.runForChipSeq(
                     peaksBedGz = it.file,
                     assemblyTwoBit = twoBitMap?.get(it.assembly) ?: HttpInputFile(assemblyUrl(it.assembly), "${it.assembly}.2bit", "dockerhub.wenglab.org/pratth/alpine:latest"),
                     chromSizes = chromSizesMap?.get(it.assembly) ?: HttpInputFile(chromeSizesUrl(it.assembly), "${it.assembly}.chrom.sizes", "dockerhub.wenglab.org/pratth/alpine:latest"),
-                    assembly = it.assembly
+                    assembly = it.assembly,
+                    methylBeds = null,
+                    rDHSs = null
                 )
             }.toFlux()
         }
