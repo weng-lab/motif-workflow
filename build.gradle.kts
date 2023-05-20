@@ -34,6 +34,26 @@ dependencies {
     testImplementation("org.assertj", "assertj-core", "3.11.1")
 }
 
+val publicationName = "motif-workflow"
+publishing {
+    publications {
+        create<MavenPublication>(publicationName) {
+            from(components["java"])
+            artifact(sourcesJar.get())
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/weng-lab/motif-workflow")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
