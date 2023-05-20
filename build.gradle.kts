@@ -2,13 +2,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    kotlin("jvm") version "1.3.21"
+    kotlin("jvm") version "1.7.0"
     id("application")
-    id("com.github.johnrengelman.shadow") version "4.0.2"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    java
 }
 
 group = "com.genomealmanac"
-version = "1.0.0"
+version = "2.0.1"
 
 repositories {
     mavenLocal()
@@ -24,11 +25,11 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("io.krews", "krews", "0.13.1")
+    implementation("io.krews", "krews", "0.14.0")
     implementation("com.squareup.okhttp3", "okhttp", "3.12.1")
     implementation("com.squareup.moshi", "moshi-kotlin", "1.8.0")
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.4.0")
-    testCompile("org.assertj", "assertj-core", "3.11.1")
+    testImplementation("org.assertj", "assertj-core", "3.11.1")
 }
 
 tasks.withType<KotlinCompile> {
@@ -36,11 +37,11 @@ tasks.withType<KotlinCompile> {
 }
 
 application {
-    mainClassName = "AppKt"
+    mainClass.set("AppKt")
 }
 
-val shadowJar: ShadowJar by tasks
-shadowJar.apply {
-    classifier = "exec"
-    destinationDir = file("build")
+tasks.withType<ShadowJar> {
+    archiveBaseName.set("base")
+    archiveClassifier.set("")
+    destinationDirectory.set(file("build"))
 }
