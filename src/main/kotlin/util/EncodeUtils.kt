@@ -134,11 +134,11 @@ fun chipSeqBedFiles(): List<EncodeFileWithExp> {
         }.max()
 
         var best_files = filteredPeakfilesforExp.filter { it->
-            it.outputType.toLowerCase().contains("optimal")
+            it.outputType.lowercase().contains("optimal")
         }
         if(best_files.size==0) {
             best_files = filteredPeakfilesforExp.filter { it->
-                it.outputType.toLowerCase().contains("pseudoreplicated")
+                it.outputType.lowercase().contains("pseudoreplicated")
             }
         }
         if(best_files.size==0) {
@@ -359,7 +359,7 @@ private fun EncodeExperiment.methylScore(): Double {
             bam.qualityMetrics?.firstOrNull()?.mapped !== null
         }.map {
             bam -> bam.qualityMetrics!!.firstOrNull()!!.mapped
-        }.sumByDouble { it!!.split("%")[0].toDouble() }
+        }.sumOf { it!!.split("%")[0].toDouble() }
     }
     return repScores.average()
 }
@@ -373,7 +373,7 @@ private fun EncodeExperiment.atacScore(): Double {
             bam.qualityMetrics?.firstOrNull()?.mapped !== null
         }.map {
             bam -> bam.qualityMetrics!!.firstOrNull()!!.mapped
-        }.sumByDouble { it!!.split("%")[0].toDouble() }
+        }.sumOf { it!!.split("%")[0].toDouble() }
     }
     return repScores.average()
 }

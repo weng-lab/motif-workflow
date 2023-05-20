@@ -7,7 +7,7 @@ import java.util.*
  */
 data class EncodeSearchResult(@Json(name = "@graph") val graph: List<SearchGraphEntry>)
 data class SearchGraphEntry(val accession: String)
-
+ 
 /*
  * Experiment Metadata Results Model
  */
@@ -60,12 +60,12 @@ data class ExperimentDonor(@Json(name = "@id") val id: String)
 /*
  * Some helper functions
  */
-fun ExperimentFile.isReleased() = status.toLowerCase() == "released"
-fun ExperimentFile.isReplicatedPeaks() = fileType.toLowerCase() == "bed narrowpeak" &&
-        (outputType.toLowerCase() == "replicated peaks" || outputType.toLowerCase() == "optimal idr thresholded peaks"
-                || outputType.toLowerCase() == "pseudoreplicated idr thresholded peaks" || outputType.toLowerCase() == "pseudoreplicated peaks" || outputType.toLowerCase() == "idr thresholded peaks")
-fun ExperimentFile.isBedMethyl() = fileType.toLowerCase() == "bed bedmethyl" &&
-        outputType.toLowerCase() == "methylation state at cpg"
-fun ExperimentFile.isBam() = fileType.toLowerCase() == "bam"
-fun ExperimentFile.isAlignments() = outputType.toLowerCase() == "alignments"
-fun ExperimentFile.isPeak() = assembly!=null && ( outputType.toLowerCase().contains("idr") || outputType.toLowerCase().contains("replicated") ) && technicalReplicates!=null && !fileType.toLowerCase().contains("big")
+fun ExperimentFile.isReleased() = status.lowercase() == "released"
+fun ExperimentFile.isReplicatedPeaks() = fileType.lowercase() == "bed narrowpeak" &&
+        (outputType.lowercase() == "replicated peaks" || outputType.lowercase() == "optimal idr thresholded peaks"
+                || outputType.lowercase() == "pseudoreplicated idr thresholded peaks" || outputType.lowercase() == "pseudoreplicated peaks" || outputType.lowercase() == "idr thresholded peaks")
+fun ExperimentFile.isBedMethyl() = fileType.lowercase() == "bed bedmethyl" &&
+        outputType.lowercase() == "methylation state at cpg"
+fun ExperimentFile.isBam() = fileType.lowercase() == "bam"
+fun ExperimentFile.isAlignments() = outputType.lowercase() == "alignments"
+fun ExperimentFile.isPeak() = assembly!=null && ( outputType.lowercase().contains("idr") || outputType.lowercase().contains("replicated") ) && technicalReplicates !== null && !fileType.lowercase().contains("big")
